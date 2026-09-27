@@ -54,7 +54,7 @@ macro(blender_platform_install_bundle_resources)
       COMMAND \"${PYTHON_EXECUTABLE}\"
         \"${CMAKE_SOURCE_DIR}/build_files/ios/compile_asset_catalog.py\"
         --app-bundle \"\${CMAKE_INSTALL_PREFIX}/Blender.app\"
-        --icon-package \"${CMAKE_SOURCE_DIR}/release/darwin/blender_liquid_glass.icon\"
+        --icon-package \"${CMAKE_SOURCE_DIR}/release/ios/modeling3d.icon\"
         --platform \"${_ios_asset_platform}\"
         --minimum-os \"${CMAKE_OSX_DEPLOYMENT_TARGET}\"
       COMMAND_ERROR_IS_FATAL ANY
@@ -87,7 +87,7 @@ macro(blender_platform_install_python)
         --app-bundle \"\${CMAKE_INSTALL_PREFIX}/Blender.app\"
         --import-root
           \"\${CMAKE_INSTALL_PREFIX}/${TARGETDIR_VER}/python/lib/python${PYTHON_VERSION}\"
-        --bundle-identifier \"org.blenderfoundation.blender.ios\"
+        --bundle-identifier \"com.shlokbhakta.modeling3d\"
         --platform \"${_python_ios_platform}\"
         --minimum-os \"${CMAKE_OSX_DEPLOYMENT_TARGET}\"
       COMMAND_ERROR_IS_FATAL ANY

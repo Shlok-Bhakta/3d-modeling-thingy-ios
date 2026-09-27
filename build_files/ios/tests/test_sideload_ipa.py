@@ -28,7 +28,7 @@ class SideloadIpaTests(unittest.TestCase):
                 {
                     "CFBundleDisplayName": "Blender",
                     "CFBundleExecutable": "Blender",
-                    "CFBundleIdentifier": "org.blenderfoundation.blender.ios",
+                    "CFBundleIdentifier": "com.shlokbhakta.modeling3d",
                     "CFBundleName": "Blender",
                     "CFBundlePackageType": "APPL",
                     "UIDeviceFamily": [1, 2],
@@ -67,7 +67,7 @@ class SideloadIpaTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = self.make_bundle(root)
-            output = root / "DevBlender.ipa"
+            output = root / "3D-Modeling-Preview.ipa"
 
             result = package_sideload_ipa(source, output, root / "staging")
 
@@ -80,9 +80,9 @@ class SideloadIpaTests(unittest.TestCase):
                 self.assertTrue(all(name.startswith("Payload/") for name in names))
                 self.assertIn("Payload/Blender.app/Blender", names)
                 plist = plistlib.loads(archive.read("Payload/Blender.app/Info.plist"))
-            self.assertEqual(plist["CFBundleIdentifier"], "test.blenderfoundation.blender.ios")
-            self.assertEqual(plist["CFBundleName"], "DevBlender")
-            self.assertEqual(plist["CFBundleDisplayName"], "DevBlender")
+            self.assertEqual(plist["CFBundleIdentifier"], "com.shlokbhakta.modeling3d.preview")
+            self.assertEqual(plist["CFBundleName"], "3D Modeling")
+            self.assertEqual(plist["CFBundleDisplayName"], "3D Modeling")
             self.assertEqual(plist["CFBundleExecutable"], "Blender")
 
     def test_rejects_loose_static_or_shared_libraries(self) -> None:

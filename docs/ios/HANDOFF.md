@@ -1,7 +1,7 @@
-# Blender 5.2 iOS port handoff
+# 3D Modeling iOS port handoff
 
-This branch ports the official Blender iOS work onto the immutable Blender
-`v5.2.0` release. The simulator product reaches a responsive Workbench frame on
+This independent fork ports Blender onto the immutable Blender `v5.2.0`
+release. The simulator product reaches a responsive Workbench frame on
 iPhone and iPad, embeds CPython and its accepted native packages, and renders
 with portable CPU Cycles. The device product builds as arm64 iPhoneOS and is
 handed off as one universal unsigned IPA; owner signing, provisioning, and

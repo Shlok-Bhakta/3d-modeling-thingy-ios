@@ -20,6 +20,7 @@ add_definitions(
   -DBLENDER_PYTHON_PLATFORM_HEADER=\"bpy_interface_ios.hh\"
   -DBLENDER_PLATFORM_RESOURCE_DIR=\"Assets\"
   -DBLENDER_PLATFORM_DEFAULT_UI_SCALE=1.65f
+  -DBLENDER_PLATFORM_REBRANDED_IOS
   -DQUADRIFLOW_SUBPROCESS_SUPPORT=0
   -DBLENDER_METAL_PLATFORM_HEADER=\"mtl_platform_ios.hh\"
 )
@@ -339,7 +340,7 @@ if(WITH_APPLE_CROSSPLATFORM)
     set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -no_warning_for_no_symbols -c <TARGET>")
   endif()
 
-  set(CMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "org.blenderfoundation.blender.ios")
+  set(CMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.shlokbhakta.modeling3d")
   message(STATUS "Using iOS dependency sysroot: ${LIBDIR}")
   message(STATUS "Using iOS host tools: ${IOS_HOST_TOOLS_DIR}")
   return()

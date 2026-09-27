@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Create the audited DevBlender sideload IPA used by PR previews."""
+"""Create the audited sideload IPA used by PR previews."""
 
 from __future__ import annotations
 
@@ -27,8 +27,8 @@ from package_unsigned_ipa import (
 )
 
 
-SIDELOAD_BUNDLE_ID = "test.blenderfoundation.blender.ios"
-SIDELOAD_APP_NAME = "DevBlender"
+SIDELOAD_BUNDLE_ID = "com.shlokbhakta.modeling3d.preview"
+SIDELOAD_APP_NAME = "3D Modeling"
 EXPECTED_FRAMEWORK_COUNT = 74
 
 

@@ -171,7 +171,11 @@ ScrArea *render_view_open(bContext *C, int mx, int my, ReportList *reports)
 
     /* changes context! */
     if (WM_window_open(C,
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+                       IFACE_("Render"),
+#else
                        IFACE_("Blender Render"),
+#endif
                        &window_rect,
                        SPACE_IMAGE,
                        true,

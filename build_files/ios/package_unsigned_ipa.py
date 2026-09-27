@@ -22,7 +22,7 @@ import zipfile
 from audit import Finding, audit_abi, audit_bundle, macho_candidates
 
 
-EXPECTED_BUNDLE_ID = "org.blenderfoundation.blender.ios"
+EXPECTED_BUNDLE_ID = "com.shlokbhakta.modeling3d"
 EXPECTED_DEVICE_FAMILIES = {1, 2}
 IPA_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 

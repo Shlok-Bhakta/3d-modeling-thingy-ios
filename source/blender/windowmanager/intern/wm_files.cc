@@ -2576,7 +2576,11 @@ static wmOperatorStatus wm_homefile_write_invoke(bContext *C,
     return WM_operator_confirm_ex(C,
                                   op,
                                   IFACE_("Overwrite Startup File"),
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+                                  IFACE_("These settings will be used next time."),
+#else
                                   IFACE_("Blender will start next time as it is now."),
+#endif
                                   IFACE_("Overwrite"),
                                   ui::AlertIcon::Question,
                                   false);
@@ -2801,7 +2805,11 @@ static wmOperatorStatus wm_userpref_read_invoke(bContext *C,
                         IFACE_(display_name));
   }
   else {
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+    title = IFACE_("Load Factory Preferences");
+#else
     title = IFACE_("Load Factory Blender Preferences");
+#endif
   }
 
   return WM_operator_confirm_ex(

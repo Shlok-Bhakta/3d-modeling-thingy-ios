@@ -6167,7 +6167,11 @@ static void ed_screens_statusbar_menu_create(ui::Layout &layout, void * /*arg*/)
   }
   layout.prop(
       &ptr, "show_extensions_updates", UI_ITEM_NONE, IFACE_("Extensions Updates"), ICON_NONE);
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+  layout.prop(&ptr, "show_statusbar_version", UI_ITEM_NONE, IFACE_("Version"), ICON_NONE);
+#else
   layout.prop(&ptr, "show_statusbar_version", UI_ITEM_NONE, IFACE_("Blender Version"), ICON_NONE);
+#endif
 }
 
 static wmOperatorStatus screen_context_menu_invoke(bContext *C,
@@ -7225,7 +7229,11 @@ static wmOperatorStatus drivers_editor_show_exec(bContext *C, wmOperator *op)
   ui::Button *but = ui::context_active_but_prop_get(C, &ptr, &prop, &index);
 
   /* changes context! */
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+  if (WM_window_open_temp(C, IFACE_("Drivers Editor"), SPACE_GRAPH, false)) {
+#else
   if (WM_window_open_temp(C, IFACE_("Blender Drivers Editor"), SPACE_GRAPH, false)) {
+#endif
     ED_drivers_editor_init(C, CTX_wm_area(C));
 
     /* activate driver F-Curve for the property under the cursor */
@@ -7282,7 +7290,11 @@ static void SCREEN_OT_drivers_editor_show(wmOperatorType *ot)
 static wmOperatorStatus info_log_show_exec(bContext *C, wmOperator *op)
 {
   /* changes context! */
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+  if (WM_window_open_temp(C, IFACE_("Info Log"), SPACE_INFO, false)) {
+#else
   if (WM_window_open_temp(C, IFACE_("Blender Info Log"), SPACE_INFO, false)) {
+#endif
     return OPERATOR_FINISHED;
   }
   BKE_report(op->reports, RPT_ERROR, "Failed to open window!");

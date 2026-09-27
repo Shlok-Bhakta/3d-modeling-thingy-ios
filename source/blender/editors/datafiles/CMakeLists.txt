@@ -1073,7 +1073,16 @@ if(WITH_BLENDER)
     data_to_c_simple(../../../../release/datafiles/preview_grease_pencil.blend SRC)
 
     # Images.
-    data_to_c_simple(../../../../release/datafiles/splash.png SRC)
+    if(WITH_APPLE_CROSSPLATFORM)
+      data_to_c(
+        "${CMAKE_SOURCE_DIR}/release/ios/splash.png"
+        "${CMAKE_CURRENT_BINARY_DIR}/ios_splash.png.c"
+        SRC
+        "splash_png"
+      )
+    else()
+      data_to_c_simple(../../../../release/datafiles/splash.png SRC)
+    endif()
 
     unset(SVG_CONTENTS_H)
     unset(SVG_CONTENTS_C)

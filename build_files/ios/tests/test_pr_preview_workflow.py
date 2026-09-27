@@ -118,7 +118,7 @@ class PrPreviewWorkflowTests(unittest.TestCase):
         self.assertIn("--cleanup-tag", workflow)
         self.assertIn("gh release create", workflow)
         self.assertIn("--prerelease", workflow)
-        self.assertIn("DevBlender-test.blenderfoundation.blender.ios-unsigned.ipa", workflow)
+        self.assertIn("3D-Modeling-Preview-unsigned.ipa", workflow)
         self.assertIn("application/octet-stream", workflow)
         self.assertIn("gh pr comment", workflow)
         self.assertIn("marginally-better-apps.github.io/Autoloader", workflow)

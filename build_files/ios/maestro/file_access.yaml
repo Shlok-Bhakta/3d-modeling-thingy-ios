@@ -1,5 +1,5 @@
 # Run through simulator_file_access.py to prepare the external folder and probe.
-appId: org.blenderfoundation.blender.ios
+appId: com.shlokbhakta.modeling3d
 name: Blender iOS file location selection and return
 ---
 - setOrientation: PORTRAIT
