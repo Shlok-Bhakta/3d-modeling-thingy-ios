@@ -28,7 +28,7 @@ class SideloadIpaTests(unittest.TestCase):
                 {
                     "CFBundleDisplayName": "Blender",
                     "CFBundleExecutable": "Blender",
-                    "CFBundleIdentifier": "com.shlokbhakta.modeling3d",
+                    "CFBundleIdentifier": "com.marginallybetterapps.modeling3d",
                     "CFBundleName": "Blender",
                     "CFBundlePackageType": "APPL",
                     "UIDeviceFamily": [1, 2],
@@ -80,7 +80,7 @@ class SideloadIpaTests(unittest.TestCase):
                 self.assertTrue(all(name.startswith("Payload/") for name in names))
                 self.assertIn("Payload/Blender.app/Blender", names)
                 plist = plistlib.loads(archive.read("Payload/Blender.app/Info.plist"))
-            self.assertEqual(plist["CFBundleIdentifier"], "com.shlokbhakta.modeling3d.preview")
+            self.assertEqual(plist["CFBundleIdentifier"], "com.marginallybetterapps.modeling3d.preview")
             self.assertEqual(plist["CFBundleName"], "3D Modeling")
             self.assertEqual(plist["CFBundleDisplayName"], "3D Modeling")
             self.assertEqual(plist["CFBundleExecutable"], "Blender")

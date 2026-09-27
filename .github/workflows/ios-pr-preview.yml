@@ -407,7 +407,7 @@ jobs:
           printf '%s\n\n' "Unsigned universal iPhone+iPad IPA from \`$short_sha\` ($summary, stacked on #$previous_pr). Autoloader signs this on-device." >> "$release_body"
           printf '%s\n' \
             '- App name: 3D Modeling' \
-            '- Bundle identifier: `com.shlokbhakta.modeling3d.preview`' \
+            '- Bundle identifier: `com.marginallybetterapps.modeling3d.preview`' \
             '- Layout: `Payload/Blender.app`' \
             "- SHA-256: \`$IPA_SHA256\`" \
             '' \
@@ -417,7 +417,7 @@ jobs:
             "- Install (Safari): $install_url" \
             "- Direct IPA: $ipa_url" \
             "- SHA-256: \`$IPA_SHA256\`" \
-            '- Identity: 3D Modeling / `com.shlokbhakta.modeling3d.preview`' \
+            '- Identity: 3D Modeling / `com.marginallybetterapps.modeling3d.preview`' \
             '' \
             'Autoloader signs on-device, then Settings → Installation.' >> "$comment_body"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then

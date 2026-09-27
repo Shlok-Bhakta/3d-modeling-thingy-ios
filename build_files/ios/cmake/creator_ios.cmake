@@ -87,7 +87,7 @@ macro(blender_platform_install_python)
         --app-bundle \"\${CMAKE_INSTALL_PREFIX}/Blender.app\"
         --import-root
           \"\${CMAKE_INSTALL_PREFIX}/${TARGETDIR_VER}/python/lib/python${PYTHON_VERSION}\"
-        --bundle-identifier \"com.shlokbhakta.modeling3d\"
+        --bundle-identifier \"com.marginallybetterapps.modeling3d\"
         --platform \"${_python_ios_platform}\"
         --minimum-os \"${CMAKE_OSX_DEPLOYMENT_TARGET}\"
       COMMAND_ERROR_IS_FATAL ANY

@@ -7,7 +7,7 @@ manifests, but never share build directories.
 
 - **Simulator lane:** arm64 iOS Simulator, locally runnable, toolchain-required
   local/ad-hoc signing permitted. iPhone and iPad share this one product
-  (`UIDeviceFamily` 1,2; bundle id `com.shlokbhakta.modeling3d`).
+  (`UIDeviceFamily` 1,2; bundle id `com.marginallybetterapps.modeling3d`).
 - **Device handoff lane:** arm64 iOS, packaged as one universal iPhone+iPad IPA
   without team, identity, profile, signer entitlements, `_CodeSignature`, or
   embedded Mach-O signature. It is not runnable until the owner signs it later.

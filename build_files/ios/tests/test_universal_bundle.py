@@ -29,7 +29,7 @@ class UniversalBundlePlistTests(unittest.TestCase):
     def test_bundle_id_is_the_single_ios_product(self) -> None:
         self.assertEqual(
             self.plist["CFBundleIdentifier"],
-            "com.shlokbhakta.modeling3d",
+            "com.marginallybetterapps.modeling3d",
         )
 
     def test_declares_iphone_and_ipad_device_families(self) -> None:
@@ -57,7 +57,7 @@ class UniversalBundlePlistTests(unittest.TestCase):
     def test_registers_blend_documents_for_in_place_editing(self) -> None:
         self.assertTrue(self.plist["LSSupportsOpeningDocumentsInPlace"])
         self.assertIn(
-            "com.shlokbhakta.modeling3d.project",
+            "com.marginallybetterapps.modeling3d.project",
             self.plist["CFBundleDocumentTypes"][0]["LSItemContentTypes"],
         )
         self.assertEqual(

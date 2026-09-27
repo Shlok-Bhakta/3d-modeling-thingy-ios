@@ -15,12 +15,12 @@
       <string>Owner</string>
       <key>LSItemContentTypes</key>
       <array>
-        <string>com.shlokbhakta.modeling3d.project</string>
+        <string>com.marginallybetterapps.modeling3d.project</string>
       </array>
     </dict>
   </array>
   <key>CFBundleIdentifier</key>
-  <string>com.shlokbhakta.modeling3d</string>
+  <string>com.marginallybetterapps.modeling3d</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>
@@ -86,7 +86,7 @@
       <key>UTTypeDescription</key>
       <string>3D project</string>
       <key>UTTypeIdentifier</key>
-      <string>com.shlokbhakta.modeling3d.project</string>
+      <string>com.marginallybetterapps.modeling3d.project</string>
       <key>UTTypeTagSpecification</key>
       <dict>
         <key>public.filename-extension</key>

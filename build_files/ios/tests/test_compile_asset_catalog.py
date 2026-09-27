@@ -17,7 +17,7 @@ class CompileAssetCatalogTests(unittest.TestCase):
             with info_plist.open("wb") as handle:
                 plistlib.dump(
                     {
-                        "CFBundleIdentifier": "com.shlokbhakta.modeling3d",
+                        "CFBundleIdentifier": "com.marginallybetterapps.modeling3d",
                         "UIDeviceFamily": [1, 2],
                     },
                     handle,
@@ -37,7 +37,7 @@ class CompileAssetCatalogTests(unittest.TestCase):
             with info_plist.open("rb") as handle:
                 merged = plistlib.load(handle)
             self.assertEqual(
-                merged["CFBundleIdentifier"], "com.shlokbhakta.modeling3d"
+                merged["CFBundleIdentifier"], "com.marginallybetterapps.modeling3d"
             )
             self.assertEqual(merged["UIDeviceFamily"], [1, 2])
             self.assertEqual(

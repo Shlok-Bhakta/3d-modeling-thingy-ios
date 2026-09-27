@@ -52,7 +52,7 @@ class PackagePythonFrameworksTests(unittest.TestCase):
             results = package_tree(
                 app_bundle=app,
                 import_root=import_root,
-                bundle_identifier="com.shlokbhakta.modeling3d",
+                bundle_identifier="com.marginallybetterapps.modeling3d",
                 platform="iPhoneSimulator",
                 minimum_os="18.0",
             )
@@ -79,7 +79,7 @@ class PackagePythonFrameworksTests(unittest.TestCase):
             self.assertEqual(metadata["CFBundleSupportedPlatforms"], ["iPhoneSimulator"])
             self.assertEqual(metadata["MinimumOSVersion"], "18.0")
             self.assertEqual(
-                metadata["CFBundleIdentifier"], "com.shlokbhakta.modeling3d.-ssl"
+                metadata["CFBundleIdentifier"], "com.marginallybetterapps.modeling3d.-ssl"
             )
 
     def test_nested_extension_uses_fully_qualified_module_name(self) -> None:
@@ -92,7 +92,7 @@ class PackagePythonFrameworksTests(unittest.TestCase):
             package_tree(
                 app_bundle=app,
                 import_root=import_root,
-                bundle_identifier="com.shlokbhakta.modeling3d",
+                bundle_identifier="com.marginallybetterapps.modeling3d",
                 platform="iPhoneOS",
                 minimum_os="18.0",
             )
@@ -116,7 +116,7 @@ class PackagePythonFrameworksTests(unittest.TestCase):
             arguments = {
                 "app_bundle": app,
                 "import_root": import_root,
-                "bundle_identifier": "com.shlokbhakta.modeling3d",
+                "bundle_identifier": "com.marginallybetterapps.modeling3d",
                 "platform": "iPhoneSimulator",
                 "minimum_os": "18.0",
             }
@@ -140,7 +140,7 @@ class PackagePythonFrameworksTests(unittest.TestCase):
                 package_tree(
                     app_bundle=app,
                     import_root=import_root,
-                    bundle_identifier="com.shlokbhakta.modeling3d",
+                    bundle_identifier="com.marginallybetterapps.modeling3d",
                     platform="iPhoneSimulator",
                     minimum_os="18.0",
                 )
@@ -165,7 +165,7 @@ class PackagePythonFrameworksTests(unittest.TestCase):
             package_tree(
                 app_bundle=app,
                 import_root=import_root,
-                bundle_identifier="com.shlokbhakta.modeling3d",
+                bundle_identifier="com.marginallybetterapps.modeling3d",
                 platform="iPhoneSimulator",
                 minimum_os="18.0",
             )
@@ -184,7 +184,7 @@ class PackagePythonFrameworksTests(unittest.TestCase):
             package_tree(
                 app_bundle=app,
                 import_root=import_root,
-                bundle_identifier="com.shlokbhakta.modeling3d",
+                bundle_identifier="com.marginallybetterapps.modeling3d",
                 platform="iPhoneOS",
                 minimum_os="18.0",
             )
