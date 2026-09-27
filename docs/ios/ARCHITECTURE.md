@@ -1,4 +1,4 @@
-# 3D Modeling iOS port architecture
+# 3D Modelling Thingy iOS port architecture
 
 ## Output lanes
 

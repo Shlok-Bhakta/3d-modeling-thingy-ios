@@ -51,7 +51,7 @@ cube.line(to: NSPoint(x: 500, y: 175))
 NSColor.white.setStroke()
 cube.stroke()
 
-let title = "3D Modeling" as NSString
+let title = "3D Modelling Thingy" as NSString
 let font = NSFont.systemFont(ofSize: 45, weight: .semibold)
 let attributes: [NSAttributedString.Key: Any] = [
     .font: font,

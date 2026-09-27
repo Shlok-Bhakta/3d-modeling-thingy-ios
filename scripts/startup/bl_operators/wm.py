@@ -3482,7 +3482,7 @@ class WM_MT_splash(Menu):
 
             if sys.platform == "ios":
                 col2.operator("wm.url_open", text="Project Source", icon='URL').url = (
-                    "https://github.com/Shlok-Bhakta/3d-modeling-ios"
+                    "https://github.com/Shlok-Bhakta/3d-modelling-thingy-ios"
                 )
             else:
                 col2.operator("wm.url_open_preset", text="Manual", icon='URL').type = 'MANUAL'
@@ -3550,7 +3550,7 @@ class WM_MT_splash_about(Menu):
 
         col.separator(factor=2.0)
         col.label(
-            text="3D Modeling is free software"
+            text="3D Modelling Thingy is free software"
             if sys.platform == "ios" else "Blender is free software"
         )
         col.label(text="Licensed under the GNU General Public License")
@@ -3559,7 +3559,7 @@ class WM_MT_splash_about(Menu):
         col.emboss = 'PULLDOWN_MENU'
         if sys.platform == "ios":
             col.operator("wm.url_open", text="Source and Credits", icon='URL').url = (
-                "https://github.com/Shlok-Bhakta/3d-modeling-ios"
+                "https://github.com/Shlok-Bhakta/3d-modelling-thingy-ios"
             )
             col.operator("wm.url_open", text="License", icon='URL').url = (
                 "https://www.gnu.org/licenses/gpl-3.0.html"

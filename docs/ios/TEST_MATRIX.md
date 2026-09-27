@@ -1,6 +1,6 @@
-# 3D Modeling iOS test matrix
+# 3D Modelling Thingy iOS test matrix
 
-The evidence below predates the 3D Modeling rebrand. It records the port's earlier runtime and packaging checks under its former identity.
+The evidence below predates the 3D Modelling Thingy rebrand. It records the port's earlier runtime and packaging checks under its former identity.
 
 | Test | Level | Configuration | Latest result | Artifact |
 | --- | --- | --- | --- | --- |

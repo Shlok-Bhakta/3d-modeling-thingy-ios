@@ -1,6 +1,6 @@
-# 3D Modeling iOS decisions
+# 3D Modelling Thingy iOS decisions
 
-Entries below record the port's earlier build history. Names and bundle identifiers in those entries refer to builds made before the independent 3D Modeling rebrand.
+Entries below record the port's earlier build history. Names and bundle identifiers in those entries refer to builds made before the independent 3D Modelling Thingy rebrand.
 
 ## ADR-0001: Freeze v5.2.0 and use a release-relative donor delta
 

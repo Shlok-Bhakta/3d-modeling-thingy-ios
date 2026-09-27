@@ -1,4 +1,4 @@
-# 3D Modeling iOS limitations
+# 3D Modelling Thingy iOS limitations
 
 Simulator Workbench and EEVEE were proven on both iPhone and iPad before the branding change. Packet P530 installed the
 earlier bundle (`UIDeviceFamily` 1 and 2) on an

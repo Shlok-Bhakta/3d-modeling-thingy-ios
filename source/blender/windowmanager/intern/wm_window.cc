@@ -608,7 +608,7 @@ static std::string wm_window_title_text(
       return IFACE_(ED_area_name(area).c_str());
     }
 #ifdef BLENDER_PLATFORM_REBRANDED_IOS
-    return "3D Modeling";
+    return "3D Modelling Thingy";
 #else
     return "Blender";
 #endif
@@ -695,7 +695,7 @@ static std::string wm_window_title_text(
   }
 
 #ifdef BLENDER_PLATFORM_REBRANDED_IOS
-  win_title.append(" - 3D Modeling");
+  win_title.append(" - 3D Modelling Thingy");
 #else
   win_title.append(fmt::format(" - Blender {}", BKE_blender_version_string()));
 #endif
