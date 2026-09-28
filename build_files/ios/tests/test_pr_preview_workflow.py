@@ -37,7 +37,8 @@ class PrPreviewWorkflowTests(unittest.TestCase):
 
     def test_uses_github_hosted_arm_runner_and_content_addressed_caches(self) -> None:
         workflow = WORKFLOW.read_text()
-        self.assertIn("runs-on: macos-15", workflow)
+        self.assertIn("runs-on: xcode-27", workflow)
+        self.assertIn("XCODE_PATH: /Applications/Xcode_27.app/Contents/Developer", workflow)
         self.assertNotIn("self-hosted", workflow)
         self.assertIn("actions/cache", workflow)
         self.assertIn("dependency-cache-key", workflow)
