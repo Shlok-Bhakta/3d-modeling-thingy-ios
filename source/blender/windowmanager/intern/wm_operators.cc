@@ -2437,7 +2437,7 @@ static void WM_OT_quit_blender(wmOperatorType *ot)
 #endif
   ot->idname = "WM_OT_quit_blender";
 #ifdef BLENDER_PLATFORM_REBRANDED_IOS
-  ot->description = "Quit 3D Modelling Thingy";
+  ot->description = "Quit 3D Modeling Thingy";
 #else
   ot->description = "Quit Blender";
 #endif

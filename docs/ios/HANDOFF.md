@@ -1,4 +1,4 @@
-# 3D Modelling Thingy iOS port handoff
+# 3D Modeling Thingy iOS port handoff
 
 This independent fork ports Blender onto the immutable Blender `v5.2.0`
 release. The simulator product reaches a responsive Workbench frame on

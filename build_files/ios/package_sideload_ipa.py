@@ -28,7 +28,7 @@ from package_unsigned_ipa import (
 
 
 SIDELOAD_BUNDLE_ID = "com.marginallybetterapps.modeling3d.preview"
-SIDELOAD_APP_NAME = "3D Modelling Thingy"
+SIDELOAD_APP_NAME = "3D Modeling Thingy"
 EXPECTED_FRAMEWORK_COUNT = 74
 
 

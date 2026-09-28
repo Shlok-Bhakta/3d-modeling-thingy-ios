@@ -39,7 +39,7 @@ jobs:
       CCACHE_COMPRESS: 'true'
       CCACHE_MAXSIZE: 4G
       RELEASE_DIR: ${{ github.workspace }}/.ios-preview/release
-      ASSET_NAME: 3D-Modelling-Thingy-Preview-unsigned.ipa
+      ASSET_NAME: 3D-Modeling-Thingy-Preview-unsigned.ipa
       GIT_LFS_SKIP_SMUDGE: '1'
       GH_TOKEN: ${{ github.token }}
 
@@ -357,7 +357,7 @@ jobs:
           path: ${{ env.CCACHE_DIR }}
           key: ios-device-ccache-v1-${{ steps.cache-keys.outputs.xcode-cache-key }}-${{ github.event.pull_request.head.sha }}
 
-      - name: Package and gate 3D Modelling Thingy IPA
+      - name: Package and gate 3D Modeling Thingy IPA
         id: package
         shell: bash
         run: |
@@ -406,7 +406,7 @@ jobs:
           printf '%s\n\n' "Autoloader preview for https://github.com/$GITHUB_REPOSITORY/pull/$PR_NUMBER" > "$release_body"
           printf '%s\n\n' "Unsigned universal iPhone+iPad IPA from \`$short_sha\` ($summary, stacked on #$previous_pr). Autoloader signs this on-device." >> "$release_body"
           printf '%s\n' \
-            '- App name: 3D Modelling Thingy' \
+            '- App name: 3D Modeling Thingy' \
             '- Bundle identifier: `com.marginallybetterapps.modeling3d.preview`' \
             '- Layout: `Payload/Blender.app`' \
             "- SHA-256: \`$IPA_SHA256\`" \
@@ -417,7 +417,7 @@ jobs:
             "- Install (Safari): $install_url" \
             "- Direct IPA: $ipa_url" \
             "- SHA-256: \`$IPA_SHA256\`" \
-            '- Identity: 3D Modelling Thingy / `com.marginallybetterapps.modeling3d.preview`' \
+            '- Identity: 3D Modeling Thingy / `com.marginallybetterapps.modeling3d.preview`' \
             '' \
             'Autoloader signs on-device, then Settings → Installation.' >> "$comment_body"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then

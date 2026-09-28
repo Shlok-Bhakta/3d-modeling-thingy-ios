@@ -113,7 +113,7 @@ class TOPBAR_MT_editor_menus(Menu):
 
         # Allow calling this menu directly (this might not be a header area).
         if sys.platform == "ios":
-            layout.menu("TOPBAR_MT_blender", text="3D Modelling Thingy")
+            layout.menu("TOPBAR_MT_blender", text="3D Modeling Thingy")
         elif getattr(context.area, "show_menus", False):
             layout.menu("TOPBAR_MT_blender", text="", icon='BLENDER')
         else:
@@ -129,7 +129,7 @@ class TOPBAR_MT_editor_menus(Menu):
 
 
 class TOPBAR_MT_blender(Menu):
-    bl_label = "3D Modelling Thingy" if sys.platform == "ios" else "Blender"
+    bl_label = "3D Modeling Thingy" if sys.platform == "ios" else "Blender"
 
     def draw(self, _context):
         layout = self.layout
@@ -611,7 +611,7 @@ class TOPBAR_MT_help(Menu):
 
         if sys.platform == "ios":
             layout.operator("wm.url_open", text="Project Source", icon='URL').url = (
-                "https://github.com/Shlok-Bhakta/3d-modelling-thingy-ios"
+                "https://github.com/Shlok-Bhakta/3d-modeling-thingy-ios"
             )
             layout.operator("wm.url_open", text="License", icon='URL').url = (
                 "https://www.gnu.org/licenses/gpl-3.0.html"

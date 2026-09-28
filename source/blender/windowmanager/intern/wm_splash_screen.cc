@@ -484,7 +484,7 @@ static ui::Block *wm_block_about_create(bContext *C, ARegion *region, void * /*a
   ui::Layout &col = layout.column(true);
 
 #ifdef BLENDER_PLATFORM_REBRANDED_IOS
-  uiItemL_ex(&col, "3D Modelling Thingy", ICON_NONE, true, false);
+  uiItemL_ex(&col, "3D Modeling Thingy", ICON_NONE, true, false);
 #else
   uiItemL_ex(&col, IFACE_("Blender"), ICON_NONE, true, false);
 #endif
@@ -511,13 +511,13 @@ static wmOperatorStatus wm_splash_about_invoke(bContext *C,
 void WM_OT_splash_about(wmOperatorType *ot)
 {
 #ifdef BLENDER_PLATFORM_REBRANDED_IOS
-  ot->name = "About 3D Modelling Thingy";
+  ot->name = "About 3D Modeling Thingy";
 #else
   ot->name = "About Blender";
 #endif
   ot->idname = "WM_OT_splash_about";
 #ifdef BLENDER_PLATFORM_REBRANDED_IOS
-  ot->description = "Open a window with information about 3D Modelling Thingy";
+  ot->description = "Open a window with information about 3D Modeling Thingy";
 #else
   ot->description = "Open a window with information about Blender";
 #endif

@@ -67,7 +67,7 @@ class SideloadIpaTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = self.make_bundle(root)
-            output = root / "3D-Modelling-Thingy-Preview.ipa"
+            output = root / "3D-Modeling-Thingy-Preview.ipa"
 
             result = package_sideload_ipa(source, output, root / "staging")
 
@@ -81,8 +81,8 @@ class SideloadIpaTests(unittest.TestCase):
                 self.assertIn("Payload/Blender.app/Blender", names)
                 plist = plistlib.loads(archive.read("Payload/Blender.app/Info.plist"))
             self.assertEqual(plist["CFBundleIdentifier"], "com.marginallybetterapps.modeling3d.preview")
-            self.assertEqual(plist["CFBundleName"], "3D Modelling Thingy")
-            self.assertEqual(plist["CFBundleDisplayName"], "3D Modelling Thingy")
+            self.assertEqual(plist["CFBundleName"], "3D Modeling Thingy")
+            self.assertEqual(plist["CFBundleDisplayName"], "3D Modeling Thingy")
             self.assertEqual(plist["CFBundleExecutable"], "Blender")
 
     def test_rejects_loose_static_or_shared_libraries(self) -> None:

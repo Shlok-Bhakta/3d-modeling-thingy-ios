@@ -1,6 +1,6 @@
-# 3D Modelling Thingy for iPhone and iPad
+# 3D Modeling Thingy for iPhone and iPad
 
-3D Modelling Thingy is an experimental, independent iOS port of Blender. It is not affiliated with or endorsed by the Blender Foundation. The app uses its own name, icon, splash screen, and bundle identifier. Project files keep the `.blend` format.
+3D Modeling Thingy is an experimental, independent iOS port of Blender. It is not affiliated with or endorsed by the Blender Foundation. The app uses its own name, icon, splash screen, and bundle identifier. Project files keep the `.blend` format.
 
 This repository contains the modified source and iOS build scripts. See [the iOS handoff](docs/ios/HANDOFF.md) for build instructions, [the current limitations](docs/ios/LIMITATIONS.md), and [the original Blender project](https://www.blender.org) for upstream development.
 
