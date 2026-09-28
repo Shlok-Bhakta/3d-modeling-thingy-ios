@@ -370,8 +370,8 @@ jobs:
             --staging-root "$RELEASE_DIR/staging"
           sha256="$(shasum -a 256 "$ipa" | cut -d' ' -f1)"
           framework_count="$(find "$APP_BUILD/bin/Blender.app/Frameworks" -mindepth 1 -maxdepth 1 -type d -name '*.framework' | wc -l | tr -d ' ')"
-          loose_count="$(find "$APP_BUILD/bin/Blender.app" -type f \( -name '*.so' -o -name '*.a' \) | wc -l | tr -d ' ')"
-          test "$framework_count" = 74
+          loose_count="$(find "$APP_BUILD/bin/Blender.app" -type f \( -name '*.so' -o -name '*.a' -o -name '*.dylib' \) | wc -l | tr -d ' ')"
+          test "$framework_count" = 76
           test "$loose_count" = 0
           unzip -t "$ipa"
           echo "sha256=$sha256" >> "$GITHUB_OUTPUT"

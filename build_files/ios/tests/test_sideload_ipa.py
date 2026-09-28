@@ -20,7 +20,7 @@ from package_sideload_ipa import PackagingError, package_sideload_ipa
 
 
 class SideloadIpaTests(unittest.TestCase):
-    def make_bundle(self, root: Path, framework_count: int = 74) -> Path:
+    def make_bundle(self, root: Path, framework_count: int = 76) -> Path:
         bundle = root / "Blender.app"
         bundle.mkdir()
         with (bundle / "Info.plist").open("wb") as handle:
@@ -71,7 +71,7 @@ class SideloadIpaTests(unittest.TestCase):
 
             result = package_sideload_ipa(source, output, root / "staging")
 
-            self.assertEqual(result.framework_count, 74)
+            self.assertEqual(result.framework_count, 76)
             self.assertEqual(result.loose_library_count, 0)
             self.assertEqual(len(result.sha256), 64)
             with zipfile.ZipFile(output) as archive:
@@ -99,7 +99,7 @@ class SideloadIpaTests(unittest.TestCase):
             root = Path(directory)
             source = self.make_bundle(root, framework_count=73)
 
-            with self.assertRaisesRegex(PackagingError, "expected 74 frameworks"):
+            with self.assertRaisesRegex(PackagingError, "expected 76 frameworks"):
                 package_sideload_ipa(source, root / "bad.ipa", root / "staging")
 
 

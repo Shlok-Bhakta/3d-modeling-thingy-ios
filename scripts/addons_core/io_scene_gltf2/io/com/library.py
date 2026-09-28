@@ -29,6 +29,11 @@ def dll_path(lib_name, lib_display_name) -> Path | None:
             app_library = Path(bpy.app.binary_path).parent / 'Frameworks' / library_name
             if app_library.is_file():
                 return app_library
+            framework_name = lib_name.removeprefix('bf_intern_').removesuffix('_bridge')
+            framework_library = (Path(bpy.app.binary_path).parent / 'Frameworks' /
+                                 f'{framework_name}.framework' / framework_name)
+            if framework_library.is_file():
+                return framework_library
     else:
         # Linux, BSD & other UNIX-like systems.
         library_name = 'lib{}.so'.format(lib_name)

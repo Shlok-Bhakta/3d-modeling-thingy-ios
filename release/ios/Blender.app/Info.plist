@@ -35,6 +35,14 @@
   <string>${MACOSX_BUNDLE_SHORT_VERSION_STRING}</string>
   <key>LSRequiresIPhoneOS</key>
   <true/>
+  <key>MinimumOSVersion</key>
+  <string>${CMAKE_OSX_DEPLOYMENT_TARGET}</string>
+  <key>DTPlatformName</key>
+  <string>${IOS_BUNDLE_PLATFORM_NAME}</string>
+  <key>CFBundleSupportedPlatforms</key>
+  <array>
+    <string>${IOS_BUNDLE_SUPPORTED_PLATFORM}</string>
+  </array>
   <key>LSSupportsOpeningDocumentsInPlace</key>
   <true/>
   <key>UILaunchScreen</key>
