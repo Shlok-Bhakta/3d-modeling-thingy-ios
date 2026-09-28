@@ -8,23 +8,25 @@
   <array>
     <dict>
       <key>CFBundleTypeName</key>
-      <string>Blender File</string>
+      <string>3D project</string>
       <key>CFBundleTypeRole</key>
       <string>Editor</string>
       <key>LSHandlerRank</key>
       <string>Owner</string>
       <key>LSItemContentTypes</key>
       <array>
-        <string>org.blenderfoundation.blender.file</string>
+        <string>com.marginallybetterapps.modeling3d.project</string>
       </array>
     </dict>
   </array>
   <key>CFBundleIdentifier</key>
-  <string>org.blenderfoundation.blender.ios</string>
+  <string>com.marginallybetterapps.modeling3d</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>
-  <string>Blender</string>
+  <string>3D Modeling Thingy</string>
+  <key>CFBundleDisplayName</key>
+  <string>3D Modeling Thingy</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
@@ -33,6 +35,14 @@
   <string>${MACOSX_BUNDLE_SHORT_VERSION_STRING}</string>
   <key>LSRequiresIPhoneOS</key>
   <true/>
+  <key>MinimumOSVersion</key>
+  <string>${CMAKE_OSX_DEPLOYMENT_TARGET}</string>
+  <key>DTPlatformName</key>
+  <string>${IOS_BUNDLE_PLATFORM_NAME}</string>
+  <key>CFBundleSupportedPlatforms</key>
+  <array>
+    <string>${IOS_BUNDLE_SUPPORTED_PLATFORM}</string>
+  </array>
   <key>LSSupportsOpeningDocumentsInPlace</key>
   <true/>
   <key>UILaunchScreen</key>
@@ -82,9 +92,9 @@
         <string>public.data</string>
       </array>
       <key>UTTypeDescription</key>
-      <string>Blender File</string>
+      <string>3D project</string>
       <key>UTTypeIdentifier</key>
-      <string>org.blenderfoundation.blender.file</string>
+      <string>com.marginallybetterapps.modeling3d.project</string>
       <key>UTTypeTagSpecification</key>
       <dict>
         <key>public.filename-extension</key>

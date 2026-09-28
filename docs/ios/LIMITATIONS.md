@@ -1,7 +1,7 @@
-# Blender iOS limitations
+# 3D Modeling Thingy iOS limitations
 
-Simulator Workbench and EEVEE are proven on both iPhone and iPad. Packet P530 installs the
-same `org.blenderfoundation.blender.ios` bundle (`UIDeviceFamily` 1 and 2) on an
+Simulator Workbench and EEVEE were proven on both iPhone and iPad before the branding change. Packet P530 installed the
+earlier bundle (`UIDeviceFamily` 1 and 2) on an
 iPhone 17 simulator and an iPad Pro 13-inch (M5) simulator, both on iOS 26.5.
 The bundle declares a modern launch screen so current full-screen iPhones use
 their complete native viewport instead of a legacy compatibility rectangle.

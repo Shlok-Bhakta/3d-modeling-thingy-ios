@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import bpy
+import sys
 from bpy.types import (
     Menu,
     Operator,
@@ -3382,7 +3383,11 @@ class WM_MT_splash_quick_setup(Menu):
             col = split.column()
             col.operator(
                 "preferences.copy_prev",
-                text=iface_("Import Blender {:d}.{:d} Preferences", "Operator").format(*old_version),
+                text=(
+                    iface_("Import {:d}.{:d} Preferences", "Operator")
+                    if sys.platform == "ios"
+                    else iface_("Import Blender {:d}.{:d} Preferences", "Operator")
+                ).format(*old_version),
                 icon='NONE',
                 translate=False,
             )
@@ -3409,7 +3414,7 @@ class WM_MT_splash_quick_setup(Menu):
         sub = col.column(heading="Theme")
         label = bpy.types.USERPREF_MT_interface_theme_presets.bl_label
         if label == "Presets":
-            label = "Blender Dark"
+            label = "Dark" if sys.platform == "ios" else "Blender Dark"
         sub.menu("USERPREF_MT_interface_theme_presets", text=label)
 
         col.separator()
@@ -3420,8 +3425,8 @@ class WM_MT_splash_quick_setup(Menu):
 
         sub = col.column(heading="Keymap")
         text = bpy.path.display_name(kc.name)
-        if not text:
-            text = "Blender"
+        if not text or (sys.platform == "ios" and text == "Blender"):
+            text = "Default" if sys.platform == "ios" else "Blender"
         sub.menu("USERPREF_MT_keyconfigs", text=text)
 
         if hasattr(kc_prefs, "select_mouse"):
@@ -3475,11 +3480,16 @@ class WM_MT_splash(Menu):
             # Links if no recent files.
             col2_title.label(text="Getting Started")
 
-            col2.operator("wm.url_open_preset", text="Manual", icon='URL').type = 'MANUAL'
-            col2.operator("wm.url_open", text="Support", icon='URL').url = "https://www.blender.org/support/"
-            col2.operator("wm.url_open", text="User Communities", icon='URL').url = "https://www.blender.org/community/"
-            col2.operator("wm.url_open", text="Get Involved", icon='URL').url = "https://www.blender.org/get-involved/"
-            col2.operator("wm.url_open_preset", text="Blender Website", icon='URL').type = 'BLENDER'
+            if sys.platform == "ios":
+                col2.operator("wm.url_open", text="Project Source", icon='URL').url = (
+                    "https://github.com/Shlok-Bhakta/3d-modeling-thingy-ios"
+                )
+            else:
+                col2.operator("wm.url_open_preset", text="Manual", icon='URL').type = 'MANUAL'
+                col2.operator("wm.url_open", text="Support", icon='URL').url = "https://www.blender.org/support/"
+                col2.operator("wm.url_open", text="User Communities", icon='URL').url = "https://www.blender.org/community/"
+                col2.operator("wm.url_open", text="Get Involved", icon='URL').url = "https://www.blender.org/get-involved/"
+                col2.operator("wm.url_open_preset", text="Blender Website", icon='URL').type = 'BLENDER'
 
         col_sep = layout.column()
         col_sep.separator()
@@ -3496,8 +3506,9 @@ class WM_MT_splash(Menu):
 
         col2 = split.column()
 
-        col2.operator("wm.url_open_preset", text="What's New", icon='URL').type = 'RELEASE_NOTES'
-        col2.operator("wm.url_open_preset", text="Donate to Blender", icon='FUND').type = 'FUND'
+        if sys.platform != "ios":
+            col2.operator("wm.url_open_preset", text="What's New", icon='URL').type = 'RELEASE_NOTES'
+            col2.operator("wm.url_open_preset", text="Donate to Blender", icon='FUND').type = 'FUND'
 
         layout.separator()
 
@@ -3538,18 +3549,29 @@ class WM_MT_splash_about(Menu):
         del _ghost_backend, ghost_backend
 
         col.separator(factor=2.0)
-        col.label(text="Blender is free software")
+        col.label(
+            text="3D Modeling Thingy is free software"
+            if sys.platform == "ios" else "Blender is free software"
+        )
         col.label(text="Licensed under the GNU General Public License")
 
         col = split.column(align=True)
         col.emboss = 'PULLDOWN_MENU'
-        col.operator("wm.url_open_preset", text="Donate", icon='FUND').type = 'FUND'
-        col.operator("wm.url_open_preset", text="What's New", icon='URL').type = 'RELEASE_NOTES'
-        col.separator(factor=2.0)
-        col.operator("wm.url_open_preset", text="Credits", icon='URL').type = 'CREDITS'
-        col.operator("wm.url_open", text="License", icon='URL').url = "https://www.blender.org/about/license/"
-        col.operator("wm.url_open", text="Blender Store", icon='URL').url = "https://store.blender.org"
-        col.operator("wm.url_open_preset", text="Blender Website", icon='URL').type = 'BLENDER'
+        if sys.platform == "ios":
+            col.operator("wm.url_open", text="Source and Credits", icon='URL').url = (
+                "https://github.com/Shlok-Bhakta/3d-modeling-thingy-ios"
+            )
+            col.operator("wm.url_open", text="License", icon='URL').url = (
+                "https://www.gnu.org/licenses/gpl-3.0.html"
+            )
+        else:
+            col.operator("wm.url_open_preset", text="Donate", icon='FUND').type = 'FUND'
+            col.operator("wm.url_open_preset", text="What's New", icon='URL').type = 'RELEASE_NOTES'
+            col.separator(factor=2.0)
+            col.operator("wm.url_open_preset", text="Credits", icon='URL').type = 'CREDITS'
+            col.operator("wm.url_open", text="License", icon='URL').url = "https://www.blender.org/about/license/"
+            col.operator("wm.url_open", text="Blender Store", icon='URL').url = "https://store.blender.org"
+            col.operator("wm.url_open_preset", text="Blender Website", icon='URL').type = 'BLENDER'
 
 
 class WM_MT_region_toggle_pie(Menu):

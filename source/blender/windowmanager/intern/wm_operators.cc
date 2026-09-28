@@ -2430,9 +2430,17 @@ static wmOperatorStatus wm_exit_blender_invoke(bContext *C,
 
 static void WM_OT_quit_blender(wmOperatorType *ot)
 {
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+  ot->name = "Quit";
+#else
   ot->name = "Quit Blender";
+#endif
   ot->idname = "WM_OT_quit_blender";
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+  ot->description = "Quit 3D Modeling Thingy";
+#else
   ot->description = "Quit Blender";
+#endif
 
   ot->invoke = wm_exit_blender_invoke;
   ot->exec = wm_exit_blender_exec;

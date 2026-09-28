@@ -27,7 +27,7 @@ class UnsignedIpaTests(unittest.TestCase):
             plistlib.dump(
                 {
                     "CFBundleExecutable": "Blender",
-                    "CFBundleIdentifier": "org.blenderfoundation.blender.ios",
+                    "CFBundleIdentifier": "com.marginallybetterapps.modeling3d",
                     "CFBundlePackageType": "APPL",
                     "UIDeviceFamily": [1, 2],
                 },

@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 import bpy
+import sys
 
 from bpy.types import Header, Panel, Menu, UIList
 
@@ -173,7 +174,12 @@ class FILEBROWSER_PT_filter(FileBrowserPanel, Panel):
         if is_lib_browser:
             row = col.row()
             row.label(icon='BLANK1')  # Indentation
-            row.prop(params, "use_filter_blendid", text="Blender IDs", toggle=False)
+            row.prop(
+                params,
+                "use_filter_blendid",
+                text="Data Blocks" if sys.platform == "ios" else "Blender IDs",
+                toggle=False,
+            )
             if params.use_filter_blendid:
                 row = col.row()
                 row.label(icon='BLANK1')  # Indentation

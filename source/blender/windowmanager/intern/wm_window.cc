@@ -607,7 +607,11 @@ static std::string wm_window_title_text(
     if (is_single && area && area->spacetype != SPACE_EMPTY) {
       return IFACE_(ED_area_name(area).c_str());
     }
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+    return "3D Modeling Thingy";
+#else
     return "Blender";
+#endif
   }
 
   /* This path may contain invalid UTF8 byte sequences on UNIX systems,
@@ -690,7 +694,11 @@ static std::string wm_window_title_text(
     }
   }
 
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+  win_title.append(" - 3D Modeling Thingy");
+#else
   win_title.append(fmt::format(" - Blender {}", BKE_blender_version_string()));
+#endif
 
   return win_title;
 }

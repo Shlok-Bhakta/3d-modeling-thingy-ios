@@ -1,4 +1,4 @@
-appId: org.blenderfoundation.blender.ios
+appId: com.marginallybetterapps.modeling3d
 name: Blender iPad release viewport
 ---
 - launchApp:

@@ -17,7 +17,7 @@ class CompileAssetCatalogTests(unittest.TestCase):
             with info_plist.open("wb") as handle:
                 plistlib.dump(
                     {
-                        "CFBundleIdentifier": "org.blenderfoundation.blender.ios",
+                        "CFBundleIdentifier": "com.marginallybetterapps.modeling3d",
                         "UIDeviceFamily": [1, 2],
                     },
                     handle,
@@ -28,7 +28,7 @@ class CompileAssetCatalogTests(unittest.TestCase):
                 {
                     "CFBundleIcons": {
                         "CFBundlePrimaryIcon": {
-                            "CFBundleIconName": "blender_liquid_glass"
+                            "CFBundleIconName": "modeling3d"
                         }
                     }
                 },
@@ -37,12 +37,12 @@ class CompileAssetCatalogTests(unittest.TestCase):
             with info_plist.open("rb") as handle:
                 merged = plistlib.load(handle)
             self.assertEqual(
-                merged["CFBundleIdentifier"], "org.blenderfoundation.blender.ios"
+                merged["CFBundleIdentifier"], "com.marginallybetterapps.modeling3d"
             )
             self.assertEqual(merged["UIDeviceFamily"], [1, 2])
             self.assertEqual(
                 merged["CFBundleIcons"]["CFBundlePrimaryIcon"]["CFBundleIconName"],
-                "blender_liquid_glass",
+                "modeling3d",
             )
 
 

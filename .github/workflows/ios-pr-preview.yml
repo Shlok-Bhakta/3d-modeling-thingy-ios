@@ -20,10 +20,10 @@ jobs:
       (startsWith(github.head_ref, 'story/') ||
        startsWith(github.head_ref, 'feat/') ||
        startsWith(github.head_ref, 'refactor/'))
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 360
     env:
-      XCODE_PATH: /Applications/Xcode_26.3.app/Contents/Developer
+      XCODE_PATH: /Applications/Xcode_27.app/Contents/Developer
       CI_ROOT: ${{ github.workspace }}/.ios-preview
       DEPS_BUILD: ${{ github.workspace }}/.ios-preview/deps-build
       DEPS_INSTALL: ${{ github.workspace }}/.ios-preview/deps-install
@@ -39,7 +39,7 @@ jobs:
       CCACHE_COMPRESS: 'true'
       CCACHE_MAXSIZE: 4G
       RELEASE_DIR: ${{ github.workspace }}/.ios-preview/release
-      ASSET_NAME: DevBlender-test.blenderfoundation.blender.ios-unsigned.ipa
+      ASSET_NAME: 3D-Modeling-Thingy-Preview-unsigned.ipa
       GIT_LFS_SKIP_SMUDGE: '1'
       GH_TOKEN: ${{ github.token }}
 
@@ -357,7 +357,7 @@ jobs:
           path: ${{ env.CCACHE_DIR }}
           key: ios-device-ccache-v1-${{ steps.cache-keys.outputs.xcode-cache-key }}-${{ github.event.pull_request.head.sha }}
 
-      - name: Package and gate DevBlender IPA
+      - name: Package and gate 3D Modeling Thingy IPA
         id: package
         shell: bash
         run: |
@@ -370,8 +370,8 @@ jobs:
             --staging-root "$RELEASE_DIR/staging"
           sha256="$(shasum -a 256 "$ipa" | cut -d' ' -f1)"
           framework_count="$(find "$APP_BUILD/bin/Blender.app/Frameworks" -mindepth 1 -maxdepth 1 -type d -name '*.framework' | wc -l | tr -d ' ')"
-          loose_count="$(find "$APP_BUILD/bin/Blender.app" -type f \( -name '*.so' -o -name '*.a' \) | wc -l | tr -d ' ')"
-          test "$framework_count" = 74
+          loose_count="$(find "$APP_BUILD/bin/Blender.app" -type f \( -name '*.so' -o -name '*.a' -o -name '*.dylib' \) | wc -l | tr -d ' ')"
+          test "$framework_count" = 76
           test "$loose_count" = 0
           unzip -t "$ipa"
           echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
@@ -406,8 +406,8 @@ jobs:
           printf '%s\n\n' "Autoloader preview for https://github.com/$GITHUB_REPOSITORY/pull/$PR_NUMBER" > "$release_body"
           printf '%s\n\n' "Unsigned universal iPhone+iPad IPA from \`$short_sha\` ($summary, stacked on #$previous_pr). Autoloader signs this on-device." >> "$release_body"
           printf '%s\n' \
-            '- App name: DevBlender' \
-            '- Bundle identifier: `test.blenderfoundation.blender.ios`' \
+            '- App name: 3D Modeling Thingy' \
+            '- Bundle identifier: `com.marginallybetterapps.modeling3d.preview`' \
             '- Layout: `Payload/Blender.app`' \
             "- SHA-256: \`$IPA_SHA256\`" \
             '' \
@@ -417,7 +417,7 @@ jobs:
             "- Install (Safari): $install_url" \
             "- Direct IPA: $ipa_url" \
             "- SHA-256: \`$IPA_SHA256\`" \
-            '- Identity: DevBlender / `test.blenderfoundation.blender.ios`' \
+            '- Identity: 3D Modeling Thingy / `com.marginallybetterapps.modeling3d.preview`' \
             '' \
             'Autoloader signs on-device, then Settings → Installation.' >> "$comment_body"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
