@@ -20,10 +20,10 @@ jobs:
       (startsWith(github.head_ref, 'story/') ||
        startsWith(github.head_ref, 'feat/') ||
        startsWith(github.head_ref, 'refactor/'))
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 360
     env:
-      XCODE_PATH: /Applications/Xcode_26.3.app/Contents/Developer
+      XCODE_PATH: /Applications/Xcode_27.app/Contents/Developer
       CI_ROOT: ${{ github.workspace }}/.ios-preview
       DEPS_BUILD: ${{ github.workspace }}/.ios-preview/deps-build
       DEPS_INSTALL: ${{ github.workspace }}/.ios-preview/deps-install
