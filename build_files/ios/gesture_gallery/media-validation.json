@@ -1,0 +1,104 @@
+[
+  {
+    "slug": "three-finger-pan",
+    "duration": 3.2,
+    "frames": 48,
+    "bytes": 194019
+  },
+  {
+    "slug": "two-finger-orbit",
+    "duration": 3.6,
+    "frames": 54,
+    "bytes": 257287
+  },
+  {
+    "slug": "viewport-pinch",
+    "duration": 3.27,
+    "frames": 49,
+    "bytes": 192400
+  },
+  {
+    "slug": "node-editor-pinch",
+    "duration": 3.13,
+    "frames": 47,
+    "bytes": 186160
+  },
+  {
+    "slug": "node-editor-pan",
+    "duration": 3.13,
+    "frames": 47,
+    "bytes": 174002
+  },
+  {
+    "slug": "cursor-targets-editor",
+    "duration": 14.53,
+    "frames": 218,
+    "bytes": 311279
+  },
+  {
+    "slug": "aim-then-tap",
+    "duration": 4.4,
+    "frames": 66,
+    "bytes": 112088
+  },
+  {
+    "slug": "cursor-wrap-horizontal",
+    "duration": 2.47,
+    "frames": 37,
+    "bytes": 103940
+  },
+  {
+    "slug": "cursor-wrap-vertical",
+    "duration": 3.47,
+    "frames": 52,
+    "bytes": 115685
+  },
+  {
+    "slug": "properties-pinch",
+    "duration": 3.33,
+    "frames": 50,
+    "bytes": 152543
+  },
+  {
+    "slug": "tap-hold-drag-node",
+    "duration": 3.2,
+    "frames": 48,
+    "bytes": 133303
+  },
+  {
+    "slug": "move-cube-gizmo",
+    "duration": 4.07,
+    "frames": 61,
+    "bytes": 128087
+  },
+  {
+    "slug": "rotate-cube-gizmo",
+    "duration": 4.07,
+    "frames": 61,
+    "bytes": 132143
+  },
+  {
+    "slug": "two-finger-undo",
+    "duration": 2.07,
+    "frames": 31,
+    "bytes": 97624
+  },
+  {
+    "slug": "three-finger-redo",
+    "duration": 2.0,
+    "frames": 30,
+    "bytes": 95620
+  },
+  {
+    "slug": "two-finger-hold",
+    "duration": 2.13,
+    "frames": 32,
+    "bytes": 107538
+  },
+  {
+    "slug": "four-finger-search",
+    "duration": 5.4,
+    "frames": 81,
+    "bytes": 128343
+  }
+]
