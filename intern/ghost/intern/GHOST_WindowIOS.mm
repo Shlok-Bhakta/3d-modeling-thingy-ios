@@ -1207,6 +1207,14 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   {
     return YES;
   }
+
+  /* Allow hardware drag to persist alongside hover and window gestures */
+  if (gestureRecognizer == hardware_drag_gesture_recognizer ||
+      otherGestureRecognizer == hardware_drag_gesture_recognizer)
+  {
+    return YES;
+  }
+
   return NO;
 }
 
@@ -1467,18 +1475,33 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
 
 - (void)handleHardwareDrag:(GHOSTUIPanGestureRecognizer *)sender
 {
-  const CGPoint point = [sender getScaledTouchPoint:window];
   const UIEventButtonMask button_mask = [sender getInitialButtonMask];
   const GHOST_TButton button = pointerButton(button_mask);
-  virtual_pointer->moveAbsolute(point.x, point.y, GHOST_IOSPointerSource::Hardware);
 
   if (sender.state == UIGestureRecognizerStateBegan) {
+    /* 1. Warp/move to where the click originally began BEFORE engaging the button. */
+    const CGPoint initial_point = [sender getScaledInitialTouchPoint:window];
+    virtual_pointer->moveAbsolute(initial_point.x, initial_point.y, GHOST_IOSPointerSource::Hardware);
+
+    /* 2. Dispatch the actual mouse button down event at the initial coordinate. */
     virtual_pointer->button(button, true);
+
+    /* 3. Now move to the current gesture point so Blender registers the initial delta. */
+    const CGPoint current_point = [sender getScaledTouchPoint:window];
+    virtual_pointer->moveAbsolute(current_point.x, current_point.y, GHOST_IOSPointerSource::Hardware);
+  }
+  else if (sender.state == UIGestureRecognizerStateChanged) {
+    /* Continuous drag update */
+    const CGPoint current_point = [sender getScaledTouchPoint:window];
+    virtual_pointer->moveAbsolute(current_point.x, current_point.y, GHOST_IOSPointerSource::Hardware);
   }
   else if (sender.state == UIGestureRecognizerStateEnded ||
            sender.state == UIGestureRecognizerStateCancelled ||
            sender.state == UIGestureRecognizerStateFailed)
   {
+    /* Final position update before releasing the button */
+    const CGPoint end_point = [sender getScaledTouchPoint:window];
+    virtual_pointer->moveAbsolute(end_point.x, end_point.y, GHOST_IOSPointerSource::Hardware);
     virtual_pointer->button(button, false);
   }
 }
