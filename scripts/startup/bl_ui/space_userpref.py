@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 import bpy
+import sys
 from bpy.types import (
     Header,
     Menu,
@@ -140,7 +141,13 @@ class USERPREF_MT_save_load(Menu):
         app_template = prefs.app_template
         if app_template:
             display_name = bpy.path.display_name(iface_(app_template))
-            layout.operator("wm.read_factory_userpref", text="Load Factory Blender Preferences")
+            layout.operator(
+                "wm.read_factory_userpref",
+                text=(
+                    "Load Factory Preferences"
+                    if sys.platform == "ios" else "Load Factory Blender Preferences"
+                ),
+            )
             props = layout.operator(
                 "wm.read_factory_userpref",
                 text=iface_("Load Factory {:s} Preferences").format(display_name),
@@ -359,7 +366,11 @@ class USERPREF_PT_interface_statusbar(InterfacePanel, CenterAlignMixIn, Panel):
         col.prop(view, "show_statusbar_memory", text="System Memory")
         col.prop(view, "show_statusbar_vram", text="Video Memory")
         col.prop(view, "show_extensions_updates", text="Extensions Updates")
-        col.prop(view, "show_statusbar_version", text="Blender Version")
+        col.prop(
+            view,
+            "show_statusbar_version",
+            text="Version" if sys.platform == "ios" else "Blender Version",
+        )
 
 
 class USERPREF_PT_interface_menus(InterfacePanel, CenterAlignMixIn, Panel):
@@ -756,7 +767,13 @@ class USERPREF_PT_system_display_graphics(SystemPanel, CenterAlignMixIn, Panel):
             col.prop(system, "gpu_preferred_device")
 
         if system.gpu_backend != gpu.platform.backend_type_get():
-            layout.label(text="A restart of Blender is required", icon='INFO')
+            layout.label(
+                text=(
+                    "A restart is required"
+                    if sys.platform == "ios" else "A restart of Blender is required"
+                ),
+                icon='INFO',
+            )
 
         if system.gpu_backend == 'VULKAN':
             if sys.platform == "win32" and gpu.platform.device_type_get() == 'QUALCOMM':
@@ -772,7 +789,7 @@ class USERPREF_PT_system_os_settings(SystemPanel, CenterAlignMixIn, Panel):
     def poll(cls, _context):
         # macOS isn't supported.
         from sys import platform
-        if platform == "darwin":
+        if platform in {"darwin", "ios"}:
             return False
         return True
 

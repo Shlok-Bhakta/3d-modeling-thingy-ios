@@ -400,7 +400,11 @@ static void wm_usd_export_draw(bContext *C, wmOperator *op)
       sub->prop(ptr, "incremental_frames", UI_ITEM_NONE, std::nullopt, ICON_NONE);
     }
 
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+    sub = &col->column(true, IFACE_("Project Data"));
+#else
     sub = &col->column(true, IFACE_("Blender Data"));
+#endif
     sub->prop(ptr, "export_custom_properties", UI_ITEM_NONE, std::nullopt, ICON_NONE);
     ui::Layout *props_col = &sub->column(true);
     props_col->prop(ptr, "custom_properties_namespace", UI_ITEM_NONE, std::nullopt, ICON_NONE);

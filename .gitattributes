@@ -15,6 +15,7 @@
 *.blend filter=lfs diff=lfs merge=lfs -text
 *.blend? filter=lfs diff=lfs merge=lfs -text
 *.png filter=lfs diff=lfs merge=lfs -text
+release/ios/splash.png -filter -diff -merge -text
 *.exr filter=lfs diff=lfs merge=lfs -text
 *.tx filter=lfs diff=lfs merge=lfs -text
 *.jpg filter=lfs diff=lfs merge=lfs -text

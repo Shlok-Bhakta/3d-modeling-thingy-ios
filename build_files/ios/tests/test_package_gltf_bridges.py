@@ -4,13 +4,14 @@
 
 from pathlib import Path
 import importlib.util
+import plistlib
 import sys
 import tempfile
 import types
 import unittest
 from unittest import mock
 
-from build_files.ios.package_gltf_bridges import BRIDGE_NAMES, package_bridges
+from build_files.ios.package_gltf_bridges import BRIDGE_NAMES, FRAMEWORK_NAMES, package_bridges
 
 
 REPOSITORY = Path(__file__).resolve().parents[3]
@@ -30,13 +31,20 @@ class PackageGltfBridgesTests(unittest.TestCase):
             for index, name in enumerate(BRIDGE_NAMES):
                 (addon / name).write_bytes(f"bridge-{index}".encode())
 
-            relocated = package_bridges(bundle, addon)
+            with mock.patch("build_files.ios.package_gltf_bridges.subprocess.run") as run:
+                relocated = package_bridges(bundle, addon)
 
             self.assertEqual(len(relocated), 2)
+            self.assertEqual(run.call_count, 2)
             for index, name in enumerate(BRIDGE_NAMES):
-                destination = bundle / "Frameworks" / name
+                framework = bundle / "Frameworks" / f"{FRAMEWORK_NAMES[name]}.framework"
+                destination = framework / FRAMEWORK_NAMES[name]
                 self.assertFalse((addon / name).exists())
                 self.assertEqual(destination.read_bytes(), f"bridge-{index}".encode())
+                with (framework / "Info.plist").open("rb") as handle:
+                    info = plistlib.load(handle)
+                self.assertEqual(info["CFBundleExecutable"], FRAMEWORK_NAMES[name])
+                self.assertEqual(info["CFBundleSupportedPlatforms"], ["iPhoneOS"])
 
             self.assertEqual(package_bridges(bundle, addon), [])
 
@@ -51,8 +59,8 @@ class PackageGltfBridgesTests(unittest.TestCase):
             bundle = Path(directory) / "Blender.app"
             addon = bundle / "Assets/5.2/scripts/addons_core/io_scene_gltf2"
             addon.mkdir(parents=True)
-            bridge = bundle / "Frameworks/libfixture.dylib"
-            bridge.parent.mkdir()
+            bridge = bundle / "Frameworks/fixture.framework/fixture"
+            bridge.parent.mkdir(parents=True)
             bridge.write_bytes(b"fixture")
             modules = {
                 "bpy": types.SimpleNamespace(
@@ -64,7 +72,7 @@ class PackageGltfBridgesTests(unittest.TestCase):
             with mock.patch.dict(sys.modules, modules), mock.patch.object(
                 sys, "platform", "darwin"
             ):
-                path = library.dll_path("fixture", "Fixture")
+                path = library.dll_path("bf_intern_fixture_bridge", "Fixture")
 
             self.assertEqual(path, bridge)
 

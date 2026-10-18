@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 import bpy
+import sys
 from bpy.types import Header, Menu, Panel
 
 from bpy.app.translations import (
@@ -111,7 +112,9 @@ class TOPBAR_MT_editor_menus(Menu):
         layout = self.layout
 
         # Allow calling this menu directly (this might not be a header area).
-        if getattr(context.area, "show_menus", False):
+        if sys.platform == "ios":
+            layout.menu("TOPBAR_MT_blender", text="3D Modeling Thingy")
+        elif getattr(context.area, "show_menus", False):
             layout.menu("TOPBAR_MT_blender", text="", icon='BLENDER')
         else:
             layout.menu("TOPBAR_MT_blender", text="Blender")
@@ -126,7 +129,7 @@ class TOPBAR_MT_editor_menus(Menu):
 
 
 class TOPBAR_MT_blender(Menu):
-    bl_label = "Blender"
+    bl_label = "3D Modeling Thingy" if sys.platform == "ios" else "Blender"
 
     def draw(self, _context):
         layout = self.layout
@@ -320,7 +323,10 @@ class TOPBAR_MT_file_defaults(Menu):
         layout.operator("wm.save_homefile")
         if app_template:
             display_name = bpy.path.display_name(iface_(app_template))
-            props = layout.operator("wm.read_factory_settings", text="Load Factory Blender Settings")
+            props = layout.operator(
+                "wm.read_factory_settings",
+                text="Load Factory Settings" if sys.platform == "ios" else "Load Factory Blender Settings",
+            )
             props.app_template = app_template
             props = layout.operator(
                 "wm.read_factory_settings",
@@ -602,6 +608,15 @@ class TOPBAR_MT_help(Menu):
 
     def draw(self, context):
         layout = self.layout
+
+        if sys.platform == "ios":
+            layout.operator("wm.url_open", text="Project Source", icon='URL').url = (
+                "https://github.com/Shlok-Bhakta/3d-modeling-thingy-ios"
+            )
+            layout.operator("wm.url_open", text="License", icon='URL').url = (
+                "https://www.gnu.org/licenses/gpl-3.0.html"
+            )
+            return
 
         show_developer = context.preferences.view.show_developer_ui
 

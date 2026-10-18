@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Compile Blender's Apple icon package into an installed iOS app bundle."""
+"""Compile the iOS app icon package into an installed bundle."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def compile_catalog(
     if not info_plist.is_file():
         raise FileNotFoundError(f"installed app Info.plist is missing: {info_plist}")
     if not icon_package.is_dir():
-        raise FileNotFoundError(f"Blender icon package is missing: {icon_package}")
+        raise FileNotFoundError(f"iOS icon package is missing: {icon_package}")
 
     # Keep generated data beside the install tree; canonical builds live on the
     # external build volume and must not spill large intermediates onto the host.
@@ -57,7 +57,7 @@ def compile_catalog(
                 "--target-device",
                 "ipad",
                 "--app-icon",
-                "blender_liquid_glass",
+                "modeling3d",
                 "--compress-pngs",
                 "--output-partial-info-plist",
                 str(partial_plist),

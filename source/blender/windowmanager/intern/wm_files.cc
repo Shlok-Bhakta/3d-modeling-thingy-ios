@@ -2576,7 +2576,11 @@ static wmOperatorStatus wm_homefile_write_invoke(bContext *C,
     return WM_operator_confirm_ex(C,
                                   op,
                                   IFACE_("Overwrite Startup File"),
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+                                  IFACE_("These settings will be used next time."),
+#else
                                   IFACE_("Blender will start next time as it is now."),
+#endif
                                   IFACE_("Overwrite"),
                                   ui::AlertIcon::Question,
                                   false);
@@ -2801,7 +2805,11 @@ static wmOperatorStatus wm_userpref_read_invoke(bContext *C,
                         IFACE_(display_name));
   }
   else {
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+    title = IFACE_("Load Factory Preferences");
+#else
     title = IFACE_("Load Factory Blender Preferences");
+#endif
   }
 
   return WM_operator_confirm_ex(
@@ -4253,18 +4261,32 @@ static std::string wm_save_mainfile_get_description(bContext * /*C*/,
                                                     PointerRNA *ptr)
 {
   if (RNA_boolean_get(ptr, "incremental")) {
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+    return TIP_(
+        "Save the current project file with a numerically incremented name that does not "
+        "overwrite any existing files");
+#else
     return TIP_(
         "Save the current Blender file with a numerically incremented name that does not "
         "overwrite any existing files");
+#endif
   }
   return "";
 }
 
 void WM_OT_save_mainfile(wmOperatorType *ot)
 {
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+  ot->name = "Save Project File";
+#else
   ot->name = "Save Blender File";
+#endif
   ot->idname = "WM_OT_save_mainfile";
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+  ot->description = "Save the current project file";
+#else
   ot->description = "Save the current Blender file";
+#endif
 
   ot->invoke = wm_save_mainfile_invoke;
   ot->exec = wm_save_as_mainfile_exec;
@@ -4294,7 +4316,11 @@ void WM_OT_save_mainfile(wmOperatorType *ot)
                          "incremental",
                          false,
                          "Incremental",
+#ifdef BLENDER_PLATFORM_REBRANDED_IOS
+                         "Save the current project file with a numerically incremented name that "
+#else
                          "Save the current Blender file with a numerically incremented name that "
+#endif
                          "does not overwrite any existing files");
   RNA_def_property_flag(prop, PROP_HIDDEN | PROP_SKIP_SAVE);
 

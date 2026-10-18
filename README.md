@@ -1,38 +1,7 @@
-<!--
-Keep this document short & concise,
-linking to external resources instead of including content in-line.
-See 'release/text/readme.html' for the end user read-me.
--->
+# 3D Modeling Thingy for iPhone and iPad
 
-Blender
-=======
+3D Modeling Thingy is an experimental, independent iOS port of Blender. It is not affiliated with or endorsed by the Blender Foundation. The app uses its own name, icon, splash screen, and bundle identifier. Project files keep the `.blend` format.
 
-Blender is the free and open source 3D creation suite.
-It supports the entirety of the 3D pipeline—modeling, rigging, animation, simulation, rendering, compositing,
-motion tracking and video editing.
+This repository contains the modified source and iOS build scripts. See [the iOS handoff](docs/ios/HANDOFF.md) for build instructions, [the current limitations](docs/ios/LIMITATIONS.md), and [the original Blender project](https://www.blender.org) for upstream development.
 
-![Blender screenshot](https://code.blender.org/wp-content/uploads/2018/12/springrg.jpg "Blender screenshot")
-
-Project Pages
--------------
-
-- [Main Website](https://www.blender.org)
-- [Reference Manual](https://docs.blender.org/manual/en/latest/index.html)
-- [User Community](https://www.blender.org/community/)
-
-Development
------------
-
-- [Build Instructions](https://developer.blender.org/docs/handbook/building_blender/)
-- [Code Review & Bug Tracker](https://projects.blender.org)
-- [Developer Forum](https://devtalk.blender.org)
-- [Developer Documentation](https://developer.blender.org/docs/)
-
-
-License
--------
-
-Blender as a whole is licensed under the GNU General Public License, Version 3.
-Individual files may have a different but compatible license.
-
-See [blender.org/about/license](https://www.blender.org/about/license) for details.
+Blender is licensed under the GNU General Public License, version 3. This fork retains the upstream copyright notices and licenses. See [COPYING](COPYING) and the license files in the source tree.

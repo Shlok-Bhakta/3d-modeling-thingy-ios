@@ -1,0 +1,19 @@
+{
+  "fill": {
+    "automatic-gradient": "srgb:0.07059,0.23137,0.56863,1.00000",
+    "orientation": {
+      "start": { "x": 0.5, "y": 0 },
+      "stop": { "x": 0.5, "y": 1 }
+    }
+  },
+  "groups": [
+    {
+      "layers": [
+        { "image-name": "Cube.svg", "name": "Cube" }
+      ],
+      "shadow": { "kind": "layer-color", "opacity": 0.35 },
+      "translucency": { "enabled": false, "value": 0.5 }
+    }
+  ],
+  "supported-platforms": { "squares": "shared" }
+}

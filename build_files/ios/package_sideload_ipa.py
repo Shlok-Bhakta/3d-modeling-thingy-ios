@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Create the audited DevBlender sideload IPA used by PR previews."""
+"""Create the audited sideload IPA used by PR previews."""
 
 from __future__ import annotations
 
@@ -27,9 +27,9 @@ from package_unsigned_ipa import (
 )
 
 
-SIDELOAD_BUNDLE_ID = "test.blenderfoundation.blender.ios"
-SIDELOAD_APP_NAME = "DevBlender"
-EXPECTED_FRAMEWORK_COUNT = 74
+SIDELOAD_BUNDLE_ID = "com.marginallybetterapps.modeling3d.preview"
+SIDELOAD_APP_NAME = "3D Modeling Thingy"
+EXPECTED_FRAMEWORK_COUNT = 76
 
 
 class PackagingError(RuntimeError):
@@ -72,11 +72,11 @@ def validate_source_bundle(bundle: Path, expected_framework_count: int) -> None:
         raise PackagingError(f"source bundle audit failed: {detail}")
 
     loose_libraries = sorted(
-        path for path in bundle.rglob("*") if path.is_file() and path.suffix in {".a", ".so"}
+        path for path in bundle.rglob("*") if path.is_file() and path.suffix in {".a", ".so", ".dylib"}
     )
     if loose_libraries:
         raise PackagingError(
-            f"expected 0 loose .so/.a files, found {len(loose_libraries)}: "
+            f"expected 0 loose .so/.a/.dylib files, found {len(loose_libraries)}: "
             f"{loose_libraries[0]}"
         )
 

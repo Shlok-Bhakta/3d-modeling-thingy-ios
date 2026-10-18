@@ -1,0 +1,121 @@
+[
+  {
+    "slug": "three-finger-pan",
+    "title": "Three fingers pan the view",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/three-finger-pan.json"
+  },
+  {
+    "slug": "two-finger-orbit",
+    "title": "Two fingers orbit around the cube",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/two-finger-orbit.json"
+  },
+  {
+    "slug": "viewport-pinch",
+    "title": "Cursor in the viewport: pinch to zoom",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/viewport-pinch.json"
+  },
+  {
+    "slug": "node-editor-pinch",
+    "title": "Cursor over nodes: the same pinch zooms nodes",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/node-editor-pinch.json"
+  },
+  {
+    "slug": "node-editor-pan",
+    "title": "Cursor over nodes: two fingers pan the canvas",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/node-editor-pan.json"
+  },
+  {
+    "slug": "cursor-targets-editor",
+    "title": "Move the cursor first, then pinch that editor",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/cursor-targets-editor.json"
+  },
+  {
+    "slug": "aim-then-tap",
+    "title": "Aim at the cube; tap anywhere to select it",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/aim-then-tap.json"
+  },
+  {
+    "slug": "cursor-wrap-horizontal",
+    "title": "The cursor wraps from the right edge to the left",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/cursor-wrap-horizontal.json"
+  },
+  {
+    "slug": "cursor-wrap-vertical",
+    "title": "The cursor wraps from the top edge to the bottom",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/cursor-wrap-vertical.json"
+  },
+  {
+    "slug": "properties-pinch",
+    "title": "Cursor in Properties: pinch scales the controls",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/properties-pinch.json"
+  },
+  {
+    "slug": "tap-hold-drag-node",
+    "title": "Tap, then hold and drag to move a node",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/tap-hold-drag-node.json"
+  },
+  {
+    "slug": "move-cube-gizmo",
+    "title": "Aim at the Move gizmo; tap, hold, and drag",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/move-cube-gizmo.json"
+  },
+  {
+    "slug": "rotate-cube-gizmo",
+    "title": "Aim at the Rotate ring; tap, hold, and drag",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/rotate-cube-gizmo.json"
+  },
+  {
+    "slug": "two-finger-undo",
+    "title": "A quick two-finger tap undoes the rotation",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/two-finger-undo.json"
+  },
+  {
+    "slug": "three-finger-redo",
+    "title": "A quick three-finger tap restores the rotation",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/three-finger-redo.json"
+  },
+  {
+    "slug": "two-finger-hold",
+    "title": "Hold two fingers to open the context menu",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/two-finger-hold.json"
+  },
+  {
+    "slug": "four-finger-search",
+    "title": "Four fingers open Search; aim at a result",
+    "source": "iPad Pro 13-inch (M5), iOS 26.5 simulator",
+    "result": "PASS",
+    "recipe": "build_files/ios/gesture_gallery/recipes/four-finger-search.json"
+  }
+]
