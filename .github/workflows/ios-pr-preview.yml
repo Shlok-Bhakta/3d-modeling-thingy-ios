@@ -266,6 +266,7 @@ jobs:
             build_files/ios/tests/test_ghost_file_access.py \
             build_files/ios/tests/test_simulator_file_access.py \
             build_files/ios/tests/test_file_access_runtime.py \
+            build_files/ios/tests/test_simulator_compute_failure.py \
             build_files/ios/tests/test_pr_preview_workflow.py
 
       - name: Build revision-matched native tools on cache miss
