@@ -176,20 +176,36 @@ class GHOST_IOSVirtualPointerState {
     source_ = source;
   }
 
-  void setButton(const GHOST_IOSPointerButton button, const bool down)
+  bool setButton(const GHOST_IOSPointerButton button, const bool down)
   {
-    buttons_[static_cast<uint8_t>(button)] = down;
+    return setButton(button, down, source_);
+  }
+
+  bool setButton(const GHOST_IOSPointerButton button,
+                 const bool down,
+                 const GHOST_IOSPointerSource source)
+  {
+    const bool was_down = buttonDown(button);
+    buttons_[static_cast<uint8_t>(source)][static_cast<uint8_t>(button)] = down;
+    return was_down != buttonDown(button);
   }
 
   bool buttonDown(const GHOST_IOSPointerButton button) const
   {
-    return buttons_[static_cast<uint8_t>(button)];
+    for (const auto &source_buttons : buttons_) {
+      if (source_buttons[static_cast<uint8_t>(button)]) {
+        return true;
+      }
+    }
+    return false;
   }
 
   void clearButtons()
   {
-    for (bool &button : buttons_) {
-      button = false;
+    for (auto &source_buttons : buttons_) {
+      for (bool &button : source_buttons) {
+        button = false;
+      }
     }
   }
 
@@ -220,7 +236,7 @@ class GHOST_IOSVirtualPointerState {
   double finger_y_ = 0.0;
   double last_relative_time_seconds_ = 0.0;
   double input_scale_ = 1.0;
-  bool buttons_[3] = {false, false, false};
+  bool buttons_[3][3] = {};
   bool initialized_ = false;
   bool relative_active_ = false;
   bool blender_visible_ = true;

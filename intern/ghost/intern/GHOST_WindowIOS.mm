@@ -98,16 +98,6 @@ typedef struct UserInputEvent {
 
 } UserInputEvent;
 
-static GHOST_TButton pointerButton(const UIEventButtonMask button_mask)
-{
-  if (button_mask & UIEventButtonMaskForButtonNumber(3)) {
-    return GHOST_kButtonMaskMiddle;
-  }
-  if (button_mask & UIEventButtonMaskSecondary) {
-    return GHOST_kButtonMaskRight;
-  }
-  return GHOST_kButtonMaskLeft;
-}
 
 /* GHOSTUITapGesture interface for capturing taps. */
 @interface GHOSTUITapGestureRecognizer : UITapGestureRecognizer
@@ -185,7 +175,6 @@ static GHOST_TButton pointerButton(const UIEventButtonMask button_mask)
   BOOL has_initial_touch_point;
   NSTimeInterval initial_touch_timestamp;
   NSTimeInterval touch_timestamp;
-  UIEventButtonMask initial_button_mask;
 }
 - (CGPoint)getScaledTouchPoint:(GHOST_WindowIOS *)window;
 - (CGPoint)getScaledInitialTouchPoint:(GHOST_WindowIOS *)window;
@@ -196,7 +185,6 @@ static GHOST_TButton pointerButton(const UIEventButtonMask button_mask)
 
 - (void)setCachedTranslation:(CGPoint)translation;
 - (CGPoint)getCachedTranslation;
-- (UIEventButtonMask)getInitialButtonMask;
 @end
 
 @implementation GHOSTUIPanGestureRecognizer
@@ -209,7 +197,6 @@ static GHOST_TButton pointerButton(const UIEventButtonMask button_mask)
 
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
-  initial_button_mask = event.buttonMask;
   if (self.minimumNumberOfTouches == 1 && self.maximumNumberOfTouches == 1) {
     UITouch *touch = [touches anyObject];
     initial_touch_point = [touch locationInView:self.view];
@@ -271,10 +258,6 @@ static GHOST_TButton pointerButton(const UIEventButtonMask button_mask)
   return cached_translation;
 }
 
-- (UIEventButtonMask)getInitialButtonMask
-{
-  return initial_button_mask;
-}
 @end
 
 @interface GHOSTUIHoverGestureRecognizer : UIHoverGestureRecognizer
@@ -357,15 +340,12 @@ static GHOST_TButton pointerButton(const UIEventButtonMask button_mask)
   GHOSTUITapGestureRecognizer *tap_gesture_recognizer;
   GHOSTUILongPressGestureRecognizer *double_tap_drag_gesture_recognizer;
   GHOSTUITapGestureRecognizer *triple_tap_gesture_recognizer;
-  GHOSTUITapGestureRecognizer *mouse_secondary_tap_recognizer;
-  GHOSTUITapGestureRecognizer *mouse_middle_tap_recognizer;
   GHOSTUITapGestureRecognizer *tap2f_gesture_recognizer;
   GHOSTUILongPressGestureRecognizer *two_finger_hold_gesture_recognizer;
   GHOSTUITapGestureRecognizer *tap3f_gesture_recognizer;
   GHOSTUITapGestureRecognizer *tap4f_gesture_recognizer;
   GHOSTUIPanGestureRecognizer *pan_gesture_recognizer;
   GHOSTUIPanGestureRecognizer *pencil_drag_gesture_recognizer;
-  GHOSTUIPanGestureRecognizer *hardware_drag_gesture_recognizer;
   GHOSTUIPanGestureRecognizer *pan2f_gesture_recognizer;
   GHOSTUIPanGestureRecognizer *pan3f_gesture_recognizer;
   GHOSTUIPanGestureRecognizer *scroll_gesture_recognizer;
@@ -409,6 +389,7 @@ static GHOST_TButton pointerButton(const UIEventButtonMask button_mask)
 - (void)registerWindowControls;
 - (void)updateFileAccessControls;
 - (void)handleCloseWindow;
+- (BOOL)allowsPointerLock;
 
 /* Blender event generation. */
 - (void)generateUserInputEvents:(const UserInputEvent &)event_info;
@@ -424,14 +405,12 @@ static GHOST_TButton pointerButton(const UIEventButtonMask button_mask)
 - (void)handleTap:(GHOSTUITapGestureRecognizer *)sender;
 - (void)handleTripleTap:(GHOSTUITapGestureRecognizer *)sender;
 - (void)handleDoubleTapDrag:(GHOSTUILongPressGestureRecognizer *)sender;
-- (void)handleMouseButtonTap:(GHOSTUITapGestureRecognizer *)sender;
 - (void)handleTwoFingerHold:(GHOSTUILongPressGestureRecognizer *)sender;
 - (void)handleTap2F:(GHOSTUITapGestureRecognizer *)sender;
 - (void)handleTap3F:(GHOSTUITapGestureRecognizer *)sender;
 - (void)handleTap4F:(GHOSTUITapGestureRecognizer *)sender;
 - (void)handlePan:(GHOSTUIPanGestureRecognizer *)sender;
 - (void)handlePencilDrag:(GHOSTUIPanGestureRecognizer *)sender;
-- (void)handleHardwareDrag:(GHOSTUIPanGestureRecognizer *)sender;
 - (void)handlePan2f:(GHOSTUIPanGestureRecognizer *)sender;
 - (void)handlePan3f:(GHOSTUIPanGestureRecognizer *)sender;
 - (void)handlePointerScroll:(GHOSTUIPanGestureRecognizer *)sender;
@@ -663,15 +642,12 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   [self releaseGestureRecognizer:tap_gesture_recognizer fromView:input_view];
   [self releaseGestureRecognizer:double_tap_drag_gesture_recognizer fromView:input_view];
   [self releaseGestureRecognizer:triple_tap_gesture_recognizer fromView:input_view];
-  [self releaseGestureRecognizer:mouse_secondary_tap_recognizer fromView:input_view];
-  [self releaseGestureRecognizer:mouse_middle_tap_recognizer fromView:input_view];
   [self releaseGestureRecognizer:tap2f_gesture_recognizer fromView:input_view];
   [self releaseGestureRecognizer:two_finger_hold_gesture_recognizer fromView:input_view];
   [self releaseGestureRecognizer:tap3f_gesture_recognizer fromView:input_view];
   [self releaseGestureRecognizer:tap4f_gesture_recognizer fromView:input_view];
   [self releaseGestureRecognizer:pan_gesture_recognizer fromView:input_view];
   [self releaseGestureRecognizer:pencil_drag_gesture_recognizer fromView:input_view];
-  [self releaseGestureRecognizer:hardware_drag_gesture_recognizer fromView:input_view];
   [self releaseGestureRecognizer:pan2f_gesture_recognizer fromView:input_view];
   [self releaseGestureRecognizer:pan3f_gesture_recognizer fromView:input_view];
   [self releaseGestureRecognizer:scroll_gesture_recognizer fromView:input_view];
@@ -682,15 +658,12 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   tap_gesture_recognizer = nil;
   double_tap_drag_gesture_recognizer = nil;
   triple_tap_gesture_recognizer = nil;
-  mouse_secondary_tap_recognizer = nil;
-  mouse_middle_tap_recognizer = nil;
   tap2f_gesture_recognizer = nil;
   two_finger_hold_gesture_recognizer = nil;
   tap3f_gesture_recognizer = nil;
   tap4f_gesture_recognizer = nil;
   pan_gesture_recognizer = nil;
   pencil_drag_gesture_recognizer = nil;
-  hardware_drag_gesture_recognizer = nil;
   pan2f_gesture_recognizer = nil;
   pan3f_gesture_recognizer = nil;
   scroll_gesture_recognizer = nil;
@@ -700,6 +673,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   edge_swipe_right = nil;
 
   if (two_finger_hold_active && virtual_pointer != nullptr) {
+    virtual_pointer->setSource(GHOST_IOSPointerSource::Finger);
     virtual_pointer->button(GHOST_kButtonMaskRight, false);
     virtual_pointer->endRelative();
   }
@@ -804,6 +778,12 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
     return;
   }
   system->handleWindowEvent(GHOST_kEventWindowClose, window);
+}
+
+- (BOOL)allowsPointerLock
+{
+  /* Child windows expose native close/file buttons, which need UIKit pointer delivery. */
+  return window != nullptr && close_window_button == nil && !text_field.isFirstResponder;
 }
 
 - (void)dealloc
@@ -911,7 +891,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   tap_gesture_recognizer.delegate = self;
   tap_gesture_recognizer.cancelsTouchesInView = false;
   tap_gesture_recognizer.allowedTouchTypes = @[
-    @(UITouchTypePencil), @(UITouchTypeDirect), @(UITouchTypeIndirectPointer)
+    @(UITouchTypePencil), @(UITouchTypeDirect)
   ];
   [window->getView() addGestureRecognizer:tap_gesture_recognizer];
 
@@ -940,25 +920,6 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   [tap_gesture_recognizer requireGestureRecognizerToFail:triple_tap_gesture_recognizer];
   [tap_gesture_recognizer requireGestureRecognizerToFail:double_tap_drag_gesture_recognizer];
   [window->getView() addGestureRecognizer:triple_tap_gesture_recognizer];
-
-  /* Preserve native mouse buttons instead of translating every pointer click to left-click. */
-  mouse_secondary_tap_recognizer = [[GHOSTUITapGestureRecognizer alloc]
-      initWithTarget:self
-              action:@selector(handleMouseButtonTap:)];
-  mouse_secondary_tap_recognizer.delegate = self;
-  mouse_secondary_tap_recognizer.cancelsTouchesInView = false;
-  mouse_secondary_tap_recognizer.allowedTouchTypes = @[@(UITouchTypeIndirectPointer)];
-  mouse_secondary_tap_recognizer.buttonMaskRequired = UIEventButtonMaskSecondary;
-  [window->getView() addGestureRecognizer:mouse_secondary_tap_recognizer];
-
-  mouse_middle_tap_recognizer = [[GHOSTUITapGestureRecognizer alloc]
-      initWithTarget:self
-              action:@selector(handleMouseButtonTap:)];
-  mouse_middle_tap_recognizer.delegate = self;
-  mouse_middle_tap_recognizer.cancelsTouchesInView = false;
-  mouse_middle_tap_recognizer.allowedTouchTypes = @[@(UITouchTypeIndirectPointer)];
-  mouse_middle_tap_recognizer.buttonMaskRequired = UIEventButtonMaskForButtonNumber(3);
-  [window->getView() addGestureRecognizer:mouse_middle_tap_recognizer];
 
   /* Two-finger tap gesture recognizer. */
   tap2f_gesture_recognizer = [[GHOSTUITapGestureRecognizer alloc]
@@ -1023,7 +984,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   pan_gesture_recognizer.allowedTouchTypes = @[@(UITouchTypeDirect)];
   [window->getView() addGestureRecognizer:pan_gesture_recognizer];
 
-  /* Pencil and hardware-pointer drags use absolute coordinates but share the same cursor. */
+  /* Pencil drags use absolute coordinates but share the same cursor. */
   pencil_drag_gesture_recognizer = [[GHOSTUIPanGestureRecognizer alloc]
       initWithTarget:self
               action:@selector(handlePencilDrag:)];
@@ -1034,16 +995,6 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   pencil_drag_gesture_recognizer.allowedTouchTypes = @[@(UITouchTypePencil)];
   [window->getView() addGestureRecognizer:pencil_drag_gesture_recognizer];
 
-  hardware_drag_gesture_recognizer = [[GHOSTUIPanGestureRecognizer alloc]
-      initWithTarget:self
-              action:@selector(handleHardwareDrag:)];
-  hardware_drag_gesture_recognizer.delegate = self;
-  hardware_drag_gesture_recognizer.cancelsTouchesInView = false;
-  hardware_drag_gesture_recognizer.minimumNumberOfTouches = 1;
-  hardware_drag_gesture_recognizer.maximumNumberOfTouches = 1;
-  hardware_drag_gesture_recognizer.allowedTouchTypes = @[@(UITouchTypeIndirectPointer)];
-  [window->getView() addGestureRecognizer:hardware_drag_gesture_recognizer];
-
   /* Pan gesture recognizer - two fingers 3D UI. */
   pan2f_gesture_recognizer = [[GHOSTUIPanGestureRecognizer alloc]
       initWithTarget:self
@@ -1053,6 +1004,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   /* Two finger gestures only.  */
   pan2f_gesture_recognizer.minimumNumberOfTouches = 2;
   pan2f_gesture_recognizer.maximumNumberOfTouches = 2;
+  pan2f_gesture_recognizer.allowedTouchTypes = @[@(UITouchTypeDirect)];
   [window->getView() addGestureRecognizer:pan2f_gesture_recognizer];
 
   /* Three-finger drag pans the 3D view. Keeping this separate from two-finger orbit avoids
@@ -1064,6 +1016,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   pan3f_gesture_recognizer.cancelsTouchesInView = false;
   pan3f_gesture_recognizer.minimumNumberOfTouches = 3;
   pan3f_gesture_recognizer.maximumNumberOfTouches = 3;
+  pan3f_gesture_recognizer.allowedTouchTypes = @[@(UITouchTypeDirect)];
   [window->getView() addGestureRecognizer:pan3f_gesture_recognizer];
 
   /* Mouse wheels and trackpads arrive as UIKit scroll-type pan gestures. */
@@ -1072,7 +1025,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
               action:@selector(handlePointerScroll:)];
   scroll_gesture_recognizer.delegate = self;
   scroll_gesture_recognizer.cancelsTouchesInView = false;
-  scroll_gesture_recognizer.allowedTouchTypes = @[@(UITouchTypeIndirectPointer)];
+  scroll_gesture_recognizer.allowedTouchTypes = @[];
   scroll_gesture_recognizer.allowedScrollTypesMask = UIScrollTypeMaskAll;
   [window->getView() addGestureRecognizer:scroll_gesture_recognizer];
 
@@ -1082,6 +1035,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
               action:@selector(handleZoom:)];
   zoom_gesture_recognizer.delegate = self;
   zoom_gesture_recognizer.cancelsTouchesInView = false;
+  zoom_gesture_recognizer.allowedTouchTypes = @[@(UITouchTypeDirect)];
   [window->getView() addGestureRecognizer:zoom_gesture_recognizer];
 
   /* Edge swipe. */
@@ -1089,6 +1043,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
       initWithTarget:self
               action:@selector(handleEdgeSwipe:)];
   edge_swipe_left.edges = UIRectEdgeLeft;
+  edge_swipe_left.allowedTouchTypes = @[@(UITouchTypeDirect)];
   edge_swipe_left.delegate = self;
   [window->getView() addGestureRecognizer:edge_swipe_left];
 
@@ -1096,6 +1051,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
       initWithTarget:self
               action:@selector(handleEdgeSwipe:)];
   edge_swipe_right.edges = UIRectEdgeRight;
+  edge_swipe_right.allowedTouchTypes = @[@(UITouchTypeDirect)];
   edge_swipe_right.delegate = self;
   [window->getView() addGestureRecognizer:edge_swipe_right];
 
@@ -1208,6 +1164,36 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
     return YES;
   }
   return NO;
+}
+
+/* Pointer buttons must reach Blender before UIKit decides whether a movement is a pan.
+ * With pointer lock, GameController owns mouse input. Without it, UIKit supplies absolute
+ * pointing and a snapshot of all held buttons, including secondary and middle buttons. */
+- (void)sendEvent:(UIEvent *)event
+{
+  if (window != nullptr && virtual_pointer != nullptr && !onscreen_keyboard_active &&
+      !virtual_pointer->usesHardwareMouse() && event.type == UIEventTypeTouches &&
+      self.rootViewController.presentedViewController == nil)
+  {
+    UIView *canvas = window->getView();
+    for (UITouch *touch in event.allTouches) {
+      if (touch.type != UITouchTypeIndirectPointer ||
+          !(touch.view == canvas || [touch.view isDescendantOfView:canvas]) ||
+          (close_window_button != nil &&
+           (touch.view == close_window_button ||
+            [touch.view isDescendantOfView:close_window_button])) ||
+          GHOST_IOSFileAccess_containsView(file_access_controls, touch.view))
+      {
+        continue;
+      }
+      CGPoint point = [touch locationInView:canvas];
+      point = window->scalePointToWindow(point);
+      virtual_pointer->moveAbsolute(point.x, point.y, GHOST_IOSPointerSource::Hardware);
+      virtual_pointer->hardwareButtons(touch.phase == UITouchPhaseCancelled ? 0 : event.buttonMask);
+      break;
+    }
+  }
+  [super sendEvent:event];
 }
 
 /* Override touch methods to capture the UITouch object. */
@@ -1346,22 +1332,12 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
       sender.state == UIGestureRecognizerStateCancelled ||
       sender.state == UIGestureRecognizerStateFailed)
   {
+    virtual_pointer->setSource(GHOST_IOSPointerSource::Finger);
     virtual_pointer->button(GHOST_kButtonMaskLeft, false);
     virtual_pointer->endRelative();
   }
 }
 
-- (void)handleMouseButtonTap:(GHOSTUITapGestureRecognizer *)sender
-{
-  if (sender.state != UIGestureRecognizerStateEnded) {
-    return;
-  }
-
-  const CGPoint point = [sender getScaledTouchPoint:window];
-  virtual_pointer->moveAbsolute(
-      point.x, point.y, GHOST_IOSPointerSource::Hardware);
-  virtual_pointer->click(pointerButton(sender.buttonMaskRequired));
-}
 
 - (void)handleTwoFingerHold:(GHOSTUILongPressGestureRecognizer *)sender
 {
@@ -1383,6 +1359,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
        sender.state == UIGestureRecognizerStateFailed) &&
       two_finger_hold_active)
   {
+    virtual_pointer->setSource(GHOST_IOSPointerSource::Finger);
     virtual_pointer->button(GHOST_kButtonMaskRight, false);
     virtual_pointer->endRelative();
     two_finger_hold_active = false;
@@ -1465,23 +1442,6 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   }
 }
 
-- (void)handleHardwareDrag:(GHOSTUIPanGestureRecognizer *)sender
-{
-  const CGPoint point = [sender getScaledTouchPoint:window];
-  const UIEventButtonMask button_mask = [sender getInitialButtonMask];
-  const GHOST_TButton button = pointerButton(button_mask);
-  virtual_pointer->moveAbsolute(point.x, point.y, GHOST_IOSPointerSource::Hardware);
-
-  if (sender.state == UIGestureRecognizerStateBegan) {
-    virtual_pointer->button(button, true);
-  }
-  else if (sender.state == UIGestureRecognizerStateEnded ||
-           sender.state == UIGestureRecognizerStateCancelled ||
-           sender.state == UIGestureRecognizerStateFailed)
-  {
-    virtual_pointer->button(button, false);
-  }
-}
 
 - (void)handlePan2f:(GHOSTUIPanGestureRecognizer *)sender
 {
@@ -1540,6 +1500,11 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
 
 - (void)handlePointerScroll:(GHOSTUIPanGestureRecognizer *)sender
 {
+  if (virtual_pointer->usesHardwareMouse()) {
+    [sender setCachedTranslation:CGPointZero];
+    return;
+  }
+
   if (sender.state == UIGestureRecognizerStateBegan ||
       sender.state == UIGestureRecognizerStateChanged)
   {
@@ -1590,6 +1555,10 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
 
 - (void)handleHover:(GHOSTUIHoverGestureRecognizer *)sender
 {
+  if ([sender getTouchType] != UITouchTypePencil && virtual_pointer->usesHardwareMouse()) {
+    return;
+  }
+
   if (sender.state == UIGestureRecognizerStateBegan ||
       sender.state == UIGestureRecognizerStateChanged)
   {
@@ -1655,6 +1624,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
 - (void)pencilInteractionDidTap:(UIPencilInteraction *)interaction
 {
   (void)interaction;
+  virtual_pointer->setSource(GHOST_IOSPointerSource::Pencil);
   virtual_pointer->click(GHOST_kButtonMaskRight, tablet_data);
 }
 
@@ -2024,6 +1994,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
         return GHOST_kFailure;
       }
       onscreen_keyboard_active = true;
+      [self.rootViewController setNeedsUpdateOfPrefersPointerLocked];
       [self applyKeyboardSelection:keyboard_properties];
     }
   }
@@ -2047,6 +2018,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
       /* Shut down the keyboard. */
       [text_field resignFirstResponder];
       [self becomeFirstResponder];
+      [self.rootViewController setNeedsUpdateOfPrefersPointerLocked];
       /*
        IOS_FIXME - Note: This may cause the console to display the warning message:
        "-[UIApplication _touchesEvent] will no longer work as expected. Please stop using it."
@@ -2121,6 +2093,15 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   }
 
   return self;
+}
+
+- (BOOL)prefersPointerLocked
+{
+  GHOSTUIWindow *input_window = (GHOSTUIWindow *)self.view.window;
+  GHOST_SystemIOS *system = static_cast<GHOST_SystemIOS *>(GHOST_ISystem::getSystem());
+  return system != nullptr && system->virtualPointer() != nullptr &&
+         system->virtualPointer()->hasHardwareMouse() &&
+         [input_window allowsPointerLock];
 }
 
 - (void)viewDidLoad

@@ -40,7 +40,7 @@ class GhostTouchPolishTests(unittest.TestCase):
         )
 
         handler = source[
-            source.rindex("- (void)handleDoubleTapDrag:") : source.rindex("- (void)handleMouseButtonTap:")
+            source.rindex("- (void)handleDoubleTapDrag:") : source.rindex("- (void)handleTwoFingerHold:")
         ]
         self.assertIn("virtual_pointer->beginRelative", handler)
         self.assertIn("virtual_pointer->moveRelative", handler)

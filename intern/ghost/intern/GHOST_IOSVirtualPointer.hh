@@ -47,6 +47,10 @@ class GHOST_IOSVirtualPointer {
              const GHOST_TabletData &tablet = GHOST_TABLET_DATA_NONE);
   void clearButtons();
   void getButtons(GHOST_Buttons &buttons) const;
+  /** UIKit's primary/secondary/middle bits, independent of touch and Pencil holds. */
+  void hardwareButtons(unsigned int mask);
+  bool hasHardwareMouse() const;
+  bool usesHardwareMouse() const;
 
   void getClientPosition(double &x, double &y) const;
   GHOST_TSuccess getCursorPosition(int32_t &screen_x, int32_t &screen_y) const;
