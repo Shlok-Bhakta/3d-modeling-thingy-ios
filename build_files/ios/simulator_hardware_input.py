@@ -43,9 +43,39 @@ def wait_for(predicate, description, timeout=30):
     raise RuntimeError(f'timed out waiting for {description}')
 
 
-def exercise(app: Path, device: str, output: Path, case, kind, method, skip_install=False, record=False):
+def assert_wheel_zoom(before, after, samples, expected_reports=3):
+    reports = {}
+    for sample in samples:
+        for report in sample['platform'].get('scroll_events', []):
+            if report['time'] >= before['t'] and report['y'] != 0:
+                reports[report['sequence']] = report
+    if len(reports) != expected_reports:
+        raise RuntimeError(f'OS received {len(reports)} of {expected_reports} wheel reports; invalid HID setup')
+    wheel_y = [report['y'] for report in reports.values()]
+    # The OS may invert physical scroll deltas for Natural Scrolling. Check the
+    # delivered delta, then let Blender's ordinary wheel keymap control zoom.
+    direction = 1 if wheel_y[0] > 0 else -1
+    assert all(y * direction > 0 for y in wheel_y), 'fixture mixed wheel directions'
+    assert (after['distance'] - before['distance']) * direction < -.01, \
+        'plain mouse wheel did not zoom in the expected direction'
+    assert before['rotation'] == after['rotation'], 'plain mouse wheel rotated the viewport'
+    event_type = 'WHEELUPMOUSE' if direction > 0 else 'WHEELDOWNMOUSE'
+    wheel_events = [e['type'] for e in after['events'] if e['type'].startswith('WHEEL')]
+    assert wheel_events == [event_type] * expected_reports, \
+        'each wheel tick must arrive once as a native Blender wheel event'
+    assert not any(e['type'] == 'TRACKPADPAN' for e in after['events']), \
+        'mouse wheel also generated trackpad scrolling'
+    assert before['pointer'] == after['pointer'], 'wheel moved the cursor'
+
+
+def exercise(app: Path, device: str, output: Path, case, kind, method, skip_install=False,
+             record=False, wheel_delta=1, wheel_reports=3):
     output.mkdir(parents=True, exist_ok=True)
     bundle = plistlib.loads((app / 'Info.plist').read_bytes())['CFBundleIdentifier']
+    if record:
+        # Establish the headed Simulator's accessory service before connecting
+        # the test mouse, rather than changing services during the replay.
+        run('open', '-a', 'Simulator', '--args', '-CurrentDeviceUDID', device)
     if not skip_install:
         run('xcrun', 'simctl', 'install', device, app)
     subprocess.run(['xcrun', 'simctl', 'terminate', device, bundle],
@@ -129,7 +159,9 @@ def exercise(app: Path, device: str, output: Path, case, kind, method, skip_inst
                 raise RuntimeError((output / 'hid.log').read_text())
         if not samples:
             raise RuntimeError('no state samples while sending HID')
-        return fresh(samples[-1]['state']['ticks']), samples
+        after = fresh(samples[-1]['state']['ticks'])
+        samples.append(dict(platform=read_json(platform_file), state=after))
+        return after, samples
 
     def assert_case(name, before, events, assertion):
         after, samples = replay(events)
@@ -153,14 +185,19 @@ def exercise(app: Path, device: str, output: Path, case, kind, method, skip_inst
     recorder = None
     recording = None
     if record:
-        run('open', '-a', 'Simulator', '--args', '-CurrentDeviceUDID', device)
         recording = tempfile.TemporaryDirectory(prefix='blender-input-video-', dir='/tmp')
         recorder = subprocess.Popen(['xcrun', 'simctl', 'io', device, 'recordVideo',
                                      '--codec=h264', '--force', recording.name + '/demo.mp4'],
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(1)
     try:
-        if case == 'middle':
+        if case == 'wheel':
+            before = configure(clear=True)
+            events = [dict(wheel=[0, wheel_delta], wait=.8) for _ in range(wheel_reports)]
+            assert_case(f'wheel-{wheel_delta}', before, events,
+                        lambda b, a, s: assert_wheel_zoom(b, a, s, expected_reports=wheel_reports))
+
+        elif case == 'middle':
             def orbit_assertion(before, after, samples):
                 presses = sum(e['type'] == 'MIDDLEMOUSE' and e['value'] == 'PRESS'
                               for e in after['events'])
@@ -256,14 +293,20 @@ def main():
     parser.add_argument('--app', required=True, type=Path)
     parser.add_argument('--device', help='Use an existing booted test simulator')
     parser.add_argument('--output', required=True, type=Path)
-    parser.add_argument('--case', action='append', choices=['middle','gizmos','touch','keyboard','pan','zoom'])
+    parser.add_argument('--case', action='append', choices=['middle','gizmos','touch','keyboard','pan','zoom','wheel'])
     parser.add_argument('--fixture', choices=['cube', 'pose'])
     parser.add_argument('--orbit-method', choices=['TURNTABLE', 'TRACKBALL'])
+    parser.add_argument('--wheel-delta', type=float, default=1,
+                        help='Vertical wheel delta, including negative or fractional values')
+    parser.add_argument('--wheel-reports', type=int, default=3,
+                        help='Expected wheel reports; use 1 to isolate simulator delivery problems')
     parser.add_argument('--record', action='store_true', help='Record each ready fixture to demo.mp4')
     parser.add_argument('--skip-install', action='store_true', help='Use an already installed build')
     parser.add_argument('--restart-between-cases', action='store_true',
                         help='Reset SimulatorKit accessory services between fixtures')
     args = parser.parse_args()
+    if args.wheel_reports < 1 or args.wheel_delta == 0:
+        parser.error('wheel reports must be positive and wheel delta must be nonzero')
     owned = args.device is None
     device = args.device
     if owned:
@@ -278,7 +321,7 @@ def main():
             run('xcrun', 'simctl', 'boot', device)
             run('xcrun', 'simctl', 'bootstatus', device, '-b')
         scenarios = []
-        for case in args.case or ['middle', 'gizmos', 'touch', 'keyboard', 'pan', 'zoom']:
+        for case in args.case or ['middle', 'gizmos', 'touch', 'keyboard', 'pan', 'zoom', 'wheel']:
             if case == 'middle':
                 scenarios += [(case, 'cube', method) for method in
                               ([args.orbit_method] if args.orbit_method else ('TURNTABLE', 'TRACKBALL'))]
@@ -294,7 +337,8 @@ def main():
                 run('xcrun', 'simctl', 'bootstatus', device, '-b')
             name = f'{case}-{method.lower()}' if case == 'middle' else f'{case}-{kind}'
             exercise(args.app.resolve(), device, args.output.resolve() / name,
-                     case, kind, method, args.skip_install or index > 0, args.record)
+                     case, kind, method, args.skip_install or index > 0, args.record,
+                     args.wheel_delta, args.wheel_reports)
     finally:
         if owned and device:
             run('xcrun', 'simctl', 'shutdown', device)

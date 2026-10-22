@@ -13,7 +13,7 @@
 
 #include "GHOST_EventButton.hh"
 #include "GHOST_EventCursor.hh"
-#include "GHOST_EventTrackpad.hh"
+#include "GHOST_EventWheel.hh"
 #include "GHOST_Rect.hh"
 
 #import <GameController/GameController.h>
@@ -168,14 +168,18 @@ class GHOST_IOSVirtualPointer::Impl {
     input.middleButton.pressedChangedHandler = button_changed;
     input.scroll.valueChangedHandler = ^(GCControllerDirectionPad *, float x, float y) {
       if (!lifetime.expired() && usesHardwareMouse() && (x != 0.0f || y != 0.0f)) {
-        system_->pushEvent(std::make_unique<GHOST_EventTrackpad>(system_->getMilliSeconds(),
-                                                               window_,
-                                                               GHOST_kTrackpadEventScroll,
-                                                               int32_t(state_.x()),
-                                                               int32_t(state_.y()),
-                                                               int32_t(std::lround(x)),
-                                                               int32_t(std::lround(y)),
-                                                               true));
+        /* Trackpad scrolling orbits with Blender's default keymap. A mouse wheel must
+         * use wheel events instead. Match Cocoa's one notch per non-zero wheel report,
+         * including fractional reports, without changing Blender's preferences. */
+        sendCursorEvent(GHOST_TABLET_DATA_NONE);
+        if (x != 0.0f) {
+          system_->pushEvent(std::make_unique<GHOST_EventWheel>(
+              system_->getMilliSeconds(), window_, GHOST_kEventWheelAxisHorizontal, x > 0 ? 1 : -1));
+        }
+        if (y != 0.0f) {
+          system_->pushEvent(std::make_unique<GHOST_EventWheel>(
+              system_->getMilliSeconds(), window_, GHOST_kEventWheelAxisVertical, y > 0 ? 1 : -1));
+        }
       }
     };
     updatePointerLockPreference();

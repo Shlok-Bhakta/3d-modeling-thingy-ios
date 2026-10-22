@@ -18,6 +18,7 @@
         completionQueue:(id)queue
              completion:(id)completion;
 @end
+
 int main(int argc, char **argv)
 {
   @autoreleasepool {
@@ -103,6 +104,10 @@ int main(int argc, char **argv)
         dlsym(io, "IOHIDEventCreateButtonEvent");
     void (*set_integer)(CFTypeRef, uint32_t, CFIndex) = dlsym(io, "IOHIDEventSetIntegerValue");
     void *(*wrap_pointer)(CFTypeRef) = dlsym(sk, "IndigoHIDMessageForPointerEventFromHIDEventRef");
+    CFTypeRef (*scroll_event)(CFAllocatorRef, uint64_t, double, double, double, uint32_t) =
+        dlsym(io, "IOHIDEventCreateScrollEvent");
+    void *(*wrap_scroll)(CFTypeRef, uint32_t) =
+        dlsym(sk, "IndigoHIDMessageForScrollEventFromHIDEventRef");
     BOOL mouse_created = argc == 3;
     uint32_t previous_mouse_buttons = 0;
     NSData *data = [[NSFileHandle fileHandleWithStandardInput] readDataToEndOfFile];
@@ -113,6 +118,23 @@ int main(int argc, char **argv)
     }
     for (NSDictionary *e in events) {
       usleep([e[@"wait"] doubleValue] * 1000000);
+      if (e[@"wheel"]) {
+        if (!mouse_created || !scroll_event || !wrap_scroll) {
+          NSLog(@"mouse wheel requires a connected mouse and scroll symbols");
+          return 1;
+        }
+        NSArray *delta = e[@"wheel"];
+        CFTypeRef event = scroll_event(NULL, mach_absolute_time(), [delta[0] doubleValue],
+                                       [delta[1] doubleValue], 0, 0);
+        void *message = wrap_scroll(event, 0x36);
+        CFRelease(event);
+        if (!message) {
+          NSLog(@"could not encode mouse wheel event");
+          return 1;
+        }
+        [client sendWithMessage:message freeWhenDone:YES completionQueue:nil completion:nil];
+        continue;
+      }
       if (e[@"mouse"]) {
         if (!create_mouse || !mouse_event || !button_event || !set_integer || !wrap_pointer) {
           NSLog(@"required mouse service symbols missing");
