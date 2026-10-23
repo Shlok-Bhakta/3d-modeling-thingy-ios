@@ -15,12 +15,15 @@
 #include "GHOST_EventCursor.hh"
 #include "GHOST_Rect.hh"
 
+#import <GameController/GameController.h>
 #import <QuartzCore/QuartzCore.h>
 #import <UIKit/UIKit.h>
 
 #include <cmath>
 
 @interface GHOSTIOSPointerHider : NSObject <UIPointerInteractionDelegate>
+@property(nonatomic, retain) UIBezierPath *path;
+@property(nonatomic) BOOL hidden;
 @end
 
 @implementation GHOSTIOSPointerHider
@@ -30,19 +33,193 @@
 {
   (void)interaction;
   (void)region;
-  return [UIPointerStyle hiddenPointerStyle];
+  return self.hidden ? [UIPointerStyle hiddenPointerStyle] :
+                       [UIPointerStyle styleWithShape:[UIPointerShape shapeWithPath:self.path]
+                                      constrainedAxes:UIAxisNeither];
+}
+
+- (void)dealloc
+{
+  [_path release];
+  [super dealloc];
 }
 
 @end
 
 class GHOST_IOSVirtualPointer::Impl {
  public:
-  explicit Impl(GHOST_SystemIOS *system) : system_(system) {}
+  explicit Impl(GHOST_SystemIOS *system) : system_(system)
+  {
+    mice_ = [[NSMutableSet alloc] init];
+    const std::weak_ptr<int> lifetime = callback_lifetime_;
+    NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
+    mouse_connect_observer_ = [[center
+        addObserverForName:GCMouseDidConnectNotification object:nil queue:NSOperationQueue.mainQueue
+        usingBlock:^(NSNotification *note) {
+          if (!lifetime.expired()) {
+            connectMouse((GCMouse *)note.object);
+          }
+        }] retain];
+    mouse_disconnect_observer_ = [[center
+        addObserverForName:GCMouseDidDisconnectNotification object:nil
+        queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
+          if (lifetime.expired()) {
+            return;
+          }
+          disconnectMouse((GCMouse *)note.object);
+          syncMouseButtons();
+          updatePointerLockPreference();
+        }] retain];
+    pointer_lock_observer_ = [[center
+        addObserverForName:UIPointerLockStateDidChangeNotification object:nil
+        queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
+          if (lifetime.expired()) {
+            return;
+          }
+          if (window_ != nullptr && note.object == window_->rootWindow.windowScene.pointerLockState) {
+            /* Keep a held press across a motion-mode transition. UIKit owns normal
+             * buttons, including native controls; GameController owns captured input. */
+            if (usesRelativeMouse()) {
+              syncMouseButtons();
+            }
+            else if (!usesHardwareMouse()) {
+              updateHardwareButtons(0);
+            }
+            updateCursorLayer();
+          }
+        }] retain];
+    for (GCMouse *mouse in GCMouse.mice) {
+      connectMouse(mouse);
+    }
+  }
 
   ~Impl()
   {
+    callback_lifetime_.reset();
+    NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
+    for (id observer in @[mouse_connect_observer_, mouse_disconnect_observer_, pointer_lock_observer_]) {
+      [center removeObserver:observer];
+      [observer release];
+    }
+    for (GCMouse *mouse in mice_.allObjects) {
+      disconnectMouse(mouse);
+    }
+    [mice_ release];
     detachWindow(window_);
     [pointer_hider_ release];
+  }
+
+  bool usesHardwareMouse() const
+  {
+    return window_ != nullptr && mice_.count != 0 && window_->rootWindow.isKeyWindow &&
+           window_->rootWindow.windowScene.activationState == UISceneActivationStateForegroundActive &&
+           !window_->getUITextField().isFirstResponder &&
+           window_->rootWindow.rootViewController.presentedViewController == nil;
+  }
+
+  bool wantsPointerLock() const
+  {
+    return usesHardwareMouse() && grab_mode_ != GHOST_kGrabDisable;
+  }
+
+  bool usesRelativeMouse() const
+  {
+    return usesHardwareMouse() && window_->rootWindow.windowScene.pointerLockState.isLocked;
+  }
+
+  void updatePointerLockPreference()
+  {
+    for (GCMouse *mouse in mice_) {
+      updateMouseMotionHandler(mouse);
+    }
+    if (window_ != nullptr) {
+      [window_->rootWindow.rootViewController setNeedsUpdateOfPrefersPointerLocked];
+    }
+  }
+
+  void updateMouseMotionHandler(GCMouse *mouse)
+  {
+    /* Normal pointing is already delivered by UIKit with system acceleration.
+     * Do not also queue high-rate raw motion on the UI thread and discard it. */
+    if (window_ == nullptr || !window_->rootWindow.rootViewController.prefersPointerLocked) {
+      mouse.mouseInput.mouseMovedHandler = nil;
+      return;
+    }
+    const std::weak_ptr<int> lifetime = callback_lifetime_;
+    mouse.mouseInput.mouseMovedHandler = ^(GCMouseInput *, float delta_x, float delta_y) {
+      if (!lifetime.expired() && usesRelativeMouse()) {
+        const double scale = window_->getWindowScaleFactor();
+        state_.moveAbsolute(state_.x() + delta_x * scale,
+                            state_.y() - delta_y * scale,
+                            GHOST_IOSPointerSource::Hardware);
+        sendCursorEvent(GHOST_TABLET_DATA_NONE);
+      }
+    };
+  }
+
+  void updateHardwareButtons(const unsigned int mask)
+  {
+    constexpr GHOST_TButton buttons[] = {
+        GHOST_kButtonMaskLeft, GHOST_kButtonMaskRight, GHOST_kButtonMaskMiddle};
+    for (int i = 0; i < 3; i++) {
+      GHOST_IOSPointerButton state_button;
+      stateButton(buttons[i], state_button);
+      const bool down = (mask & (1u << i)) != 0;
+      if (state_.setButton(state_button, down, GHOST_IOSPointerSource::Hardware)) {
+        /* Use the visible cursor's position before the press, never a drag recognizer's
+         * later location. This also establishes hover for gizmo hit testing. */
+        state_.setSource(GHOST_IOSPointerSource::Hardware);
+        sendCursorEvent(GHOST_TABLET_DATA_NONE);
+        sendButtonEvent(buttons[i], down, GHOST_TABLET_DATA_NONE);
+      }
+    }
+  }
+
+  void syncMouseButtons()
+  {
+    unsigned int mask = 0;
+    if (usesRelativeMouse()) {
+      for (GCMouse *mouse in mice_) {
+        GCMouseInput *input = mouse.mouseInput;
+        mask |= input.leftButton.isPressed ? 1u : 0u;
+        mask |= input.rightButton.isPressed ? 2u : 0u;
+        mask |= input.middleButton.isPressed ? 4u : 0u;
+      }
+    }
+    updateHardwareButtons(mask);
+  }
+
+  void connectMouse(GCMouse *mouse)
+  {
+    if (mouse.mouseInput == nil || [mice_ containsObject:mouse]) {
+      return;
+    }
+    [mice_ addObject:mouse];
+    mouse.handlerQueue = dispatch_get_main_queue();
+    GCMouseInput *input = mouse.mouseInput;
+    const std::weak_ptr<int> lifetime = callback_lifetime_;
+    auto button_changed = ^(GCControllerButtonInput *, float, BOOL) {
+      if (!lifetime.expired() && usesRelativeMouse()) {
+        syncMouseButtons();
+      }
+    };
+    input.leftButton.pressedChangedHandler = button_changed;
+    input.rightButton.pressedChangedHandler = button_changed;
+    input.middleButton.pressedChangedHandler = button_changed;
+    /* UIKit owns scrolling in both motion modes. It distinguishes a discrete wheel
+     * from a continuous trackpad and includes the modifiers for that scroll event. */
+    updatePointerLockPreference();
+  }
+
+  void disconnectMouse(GCMouse *mouse)
+  {
+    GCMouseInput *input = mouse.mouseInput;
+    input.mouseMovedHandler = nil;
+    input.leftButton.pressedChangedHandler = nil;
+    input.rightButton.pressedChangedHandler = nil;
+    input.middleButton.pressedChangedHandler = nil;
+    input.scroll.valueChangedHandler = nil;
+    [mice_ removeObject:mouse];
   }
 
   void attachWindow(GHOST_WindowIOS *window)
@@ -96,8 +273,10 @@ class GHOST_IOSVirtualPointer::Impl {
     if (pointer_hider_ == nil) {
       pointer_hider_ = [[GHOSTIOSPointerHider alloc] init];
     }
+    pointer_hider_.path = path;
     pointer_interaction_ = [[UIPointerInteraction alloc] initWithDelegate:pointer_hider_];
     [window_->getView() addInteraction:pointer_interaction_];
+    updatePointerLockPreference();
     updateCursorLayer();
   }
 
@@ -173,7 +352,9 @@ class GHOST_IOSVirtualPointer::Impl {
     }
 
     window_->getClientBounds(bounds);
-    if constexpr (GHOST_IOSInputTuning::pointer_always_wrap) {
+    if (GHOST_IOSInputTuning::pointer_always_wrap &&
+        state_.source() != GHOST_IOSPointerSource::Hardware)
+    {
       state_.wrapToBounds(bounds.l_, bounds.t_, bounds.r_, bounds.b_, 2.0, true, true);
     }
     else {
@@ -205,10 +386,19 @@ class GHOST_IOSVirtualPointer::Impl {
     }
 
     const CGFloat scale = window_->getWindowScaleFactor();
+    /* The compositor moves the app's arrow using iPad tracking and acceleration.
+     * A second app-rendered arrow would lag behind it when Blender is busy. */
+    const bool system_arrow = state_.source() == GHOST_IOSPointerSource::Hardware &&
+                              usesHardwareMouse() && !usesRelativeMouse();
+    const BOOL hide_system = !system_arrow || !state_.visible() || grab_mode_ == GHOST_kGrabHide;
+    if (pointer_hider_.hidden != hide_system) {
+      pointer_hider_.hidden = hide_system;
+      [pointer_interaction_ invalidate];
+    }
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
     cursor_layer_.position = CGPointMake(state_.x() / scale, state_.y() / scale);
-    cursor_layer_.hidden = !state_.visible() || grab_mode_ == GHOST_kGrabHide;
+    cursor_layer_.hidden = system_arrow || !state_.visible() || grab_mode_ == GHOST_kGrabHide;
     [CATransaction commit];
   }
 
@@ -236,6 +426,11 @@ class GHOST_IOSVirtualPointer::Impl {
   CAShapeLayer *cursor_layer_ = nil;
   GHOSTIOSPointerHider *pointer_hider_ = nil;
   UIPointerInteraction *pointer_interaction_ = nil;
+  NSMutableSet<GCMouse *> *mice_ = nil;
+  id mouse_connect_observer_ = nil;
+  id mouse_disconnect_observer_ = nil;
+  id pointer_lock_observer_ = nil;
+  std::shared_ptr<int> callback_lifetime_ = std::make_shared<int>(0);
 };
 
 GHOST_IOSVirtualPointer::GHOST_IOSVirtualPointer(GHOST_SystemIOS *system)
@@ -315,8 +510,8 @@ void GHOST_IOSVirtualPointer::button(const GHOST_TButton button,
                                      const GHOST_TabletData &tablet)
 {
   GHOST_IOSPointerButton state_button;
-  if (Impl::stateButton(button, state_button)) {
-    impl_->state_.setButton(state_button, down);
+  if (Impl::stateButton(button, state_button) && !impl_->state_.setButton(state_button, down)) {
+    return;
   }
   impl_->sendButtonEvent(button, down, tablet);
 }
@@ -330,7 +525,39 @@ void GHOST_IOSVirtualPointer::click(const GHOST_TButton button,
 
 void GHOST_IOSVirtualPointer::clearButtons()
 {
+  for (GHOST_TButton button : {GHOST_kButtonMaskLeft, GHOST_kButtonMaskMiddle, GHOST_kButtonMaskRight}) {
+    GHOST_IOSPointerButton state_button;
+    Impl::stateButton(button, state_button);
+    if (impl_->state_.buttonDown(state_button)) {
+      impl_->sendButtonEvent(button, false, GHOST_TABLET_DATA_NONE);
+    }
+  }
   impl_->state_.clearButtons();
+}
+
+void GHOST_IOSVirtualPointer::hardwareButtons(const unsigned int mask)
+{
+  impl_->updateHardwareButtons(mask);
+}
+
+bool GHOST_IOSVirtualPointer::hasHardwareMouse() const
+{
+  return impl_->mice_.count != 0;
+}
+
+bool GHOST_IOSVirtualPointer::usesHardwareMouse() const
+{
+  return impl_->usesHardwareMouse();
+}
+
+bool GHOST_IOSVirtualPointer::usesRelativeMouse() const
+{
+  return impl_->usesRelativeMouse();
+}
+
+bool GHOST_IOSVirtualPointer::wantsPointerLock() const
+{
+  return impl_->wantsPointerLock();
 }
 
 void GHOST_IOSVirtualPointer::getButtons(GHOST_Buttons &buttons) const
@@ -372,5 +599,6 @@ void GHOST_IOSVirtualPointer::setBlenderVisibility(const bool visible)
 void GHOST_IOSVirtualPointer::setGrabMode(const GHOST_TGrabCursorMode mode)
 {
   impl_->grab_mode_ = mode;
+  impl_->updatePointerLockPreference();
   impl_->updateCursorLayer();
 }

@@ -334,6 +334,7 @@ class GHOST_WindowIOS : public GHOST_Window {
 
   void beginFrame();
   void endFrame();
+  void noteActivity();
   bool hasDeferredSwapBuffers() const
   {
     return deferred_swap_buffers_;
@@ -350,6 +351,7 @@ class GHOST_WindowIOS : public GHOST_Window {
    */
   void flushDeferredSwapBuffers();
   bool deferred_swap_buffers_ = false;
+  uint64_t last_activity_ms_ = 0;
 
   /* Keyboard handling */
   GHOST_TSuccess popupOnscreenKeyboard(const GHOST_KeyboardProperties &keyboard_properties);

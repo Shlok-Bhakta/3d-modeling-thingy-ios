@@ -18,11 +18,12 @@
         completionQueue:(id)queue
              completion:(id)completion;
 @end
+
 int main(int argc, char **argv)
 {
   @autoreleasepool {
-    if (argc != 2) {
-      fprintf(stderr, "usage: simulator_gesture_hid UDID < events.json\n");
+    if (argc < 2 || argc > 3 || (argc == 3 && strcmp(argv[2], "--existing-mouse") != 0)) {
+      fprintf(stderr, "usage: simulator_gesture_hid UDID [--existing-mouse] < events.json\n");
       return 1;
     }
     NSString *dev = NSProcessInfo.processInfo.environment[@"DEVELOPER_DIR"];
@@ -91,19 +92,101 @@ int main(int argc, char **argv)
                         uint32_t) = dlsym(io, "IOHIDEventCreateDigitizerFingerEvent");
     void (*append)(CFTypeRef, CFTypeRef, uint32_t) = dlsym(io, "IOHIDEventAppendEvent");
     void *(*wrap)(CFTypeRef) = dlsym(sk, "IndigoHIDMessageForTrackpadEventFromHIDEventRef");
-    NSData *data = [[NSFileHandle fileHandleWithStandardInput] readDataToEndOfFile];
     if (!mouse || !parent || !finger || !append || !wrap) {
       NSLog(@"required SimulatorKit/IOKit symbols missing");
       return 1;
     }
+    void *(*key)(uint32_t, uint32_t) = dlsym(sk, "IndigoHIDMessageForKeyboardArbitrary");
+    void *(*create_mouse)(void) = dlsym(sk, "IndigoHIDMessageToCreateMouseService");
+    CFTypeRef (*mouse_event)(CFAllocatorRef, uint64_t, double, double, double, uint32_t, uint32_t) =
+        dlsym(io, "IOHIDEventCreateMouseEvent");
+    CFTypeRef (*button_event)(CFAllocatorRef, uint64_t, uint32_t, uint32_t) =
+        dlsym(io, "IOHIDEventCreateButtonEvent");
+    void (*set_integer)(CFTypeRef, uint32_t, CFIndex) = dlsym(io, "IOHIDEventSetIntegerValue");
+    void *(*wrap_pointer)(CFTypeRef) = dlsym(sk, "IndigoHIDMessageForPointerEventFromHIDEventRef");
+    CFTypeRef (*scroll_event)(CFAllocatorRef, uint64_t, double, double, double, uint32_t) =
+        dlsym(io, "IOHIDEventCreateScrollEvent");
+    void *(*wrap_scroll)(CFTypeRef, uint32_t) =
+        dlsym(sk, "IndigoHIDMessageForScrollEventFromHIDEventRef");
+    BOOL mouse_created = argc == 3;
+    uint32_t previous_mouse_buttons = 0;
+    NSData *data = [[NSFileHandle fileHandleWithStandardInput] readDataToEndOfFile];
     NSArray *events = [NSJSONSerialization JSONObjectWithData:data options:0 error:&err];
     if (![events isKindOfClass:NSArray.class]) {
       NSLog(@"invalid input: %@", err);
       return 1;
     }
-    void *(*key)(uint32_t, uint32_t) = dlsym(sk, "IndigoHIDMessageForKeyboardArbitrary");
     for (NSDictionary *e in events) {
       usleep([e[@"wait"] doubleValue] * 1000000);
+      if ([e[@"idle"] boolValue]) {
+        continue;
+      }
+      if (e[@"wheel"]) {
+        if (!mouse_created || !scroll_event || !wrap_scroll) {
+          NSLog(@"mouse wheel requires a connected mouse and scroll symbols");
+          return 1;
+        }
+        NSArray *delta = e[@"wheel"];
+        CFTypeRef event = scroll_event(NULL, mach_absolute_time(), [delta[0] doubleValue],
+                                       [delta[1] doubleValue], 0, 0);
+        void *message = wrap_scroll(event, 0x36);
+        CFRelease(event);
+        if (!message) {
+          NSLog(@"could not encode mouse wheel event");
+          return 1;
+        }
+        [client sendWithMessage:message freeWhenDone:YES completionQueue:nil completion:nil];
+        continue;
+      }
+      if (e[@"mouse"]) {
+        if (!create_mouse || !mouse_event || !button_event || !set_integer || !wrap_pointer) {
+          NSLog(@"required mouse service symbols missing");
+          return 1;
+        }
+        if (!mouse_created) {
+          [client sendWithMessage:create_mouse()
+                    freeWhenDone:YES completionQueue:nil completion:nil];
+          mouse_created = YES;
+          usleep(1000000);
+        }
+        NSArray *position = e[@"mouse"];
+        uint32_t buttons = [e[@"buttons"] unsignedIntValue];
+        uint32_t changed = buttons ^ previous_mouse_buttons;
+        /* SimulatorKit requires a child record, including motion-only reports. */
+        if (changed == 0) {
+          changed = buttons ? buttons : 1u;
+        }
+        uint64_t timestamp = mach_absolute_time();
+        CFTypeRef event = mouse_event(NULL, timestamp, [position[0] doubleValue],
+                                     [position[1] doubleValue], 0, buttons, 0);
+        while (changed) {
+          unsigned int number = __builtin_ctz(changed);
+          CFTypeRef button = button_event(NULL, timestamp, buttons, 0);
+          set_integer(button, 0x20001, number);
+          set_integer(button, 0x20004, (buttons & (1u << number)) != 0);
+          append(event, button, 0);
+          CFRelease(button);
+          changed &= ~(1u << number);
+        }
+        void *message = wrap_pointer(event);
+        CFRelease(event);
+        if (!message) {
+          NSLog(@"could not encode mouse event");
+          return 1;
+        }
+        /* SimulatorKit leaves the service target for its caller to fill in.
+         * These host test packets route to the mouse service, never the touchscreen. */
+        uint8_t *bytes = message;
+        unsigned int count = bytes[0x1c];
+        for (unsigned int i = 0; i < count; i++) {
+          uint8_t *record = bytes + 0x20 + i * 0xa0;
+          const uint32_t kind = *(uint32_t *)record;
+          *(uint32_t *)(record + (kind == 17 ? 0x2c : 0x1c)) = 0x36;
+        }
+        previous_mouse_buttons = buttons;
+        [client sendWithMessage:message freeWhenDone:YES completionQueue:nil completion:nil];
+        continue;
+      }
       if (e[@"key"]) {
         void *msg = key([e[@"key"] unsignedIntValue], [e[@"phase"] unsignedIntValue]);
         [client sendWithMessage:msg freeWhenDone:YES completionQueue:nil completion:nil];

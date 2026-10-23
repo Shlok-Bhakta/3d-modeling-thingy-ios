@@ -718,11 +718,14 @@ bool GHOST_SystemIOS::hasDialogWindow()
 void GHOST_SystemIOS::notifyExternalEventProcessed()
 {
   outside_loop_event_processed_ = true;
+  if (current_active_window_ != nullptr) {
+    current_active_window_->noteActivity();
+  }
 }
 
 GHOST_TSuccess GHOST_SystemIOS::pushEvent(std::unique_ptr<const GHOST_IEvent> event)
 {
-  outside_loop_event_processed_ = true;
+  notifyExternalEventProcessed();
   return GHOST_System::pushEvent(std::move(event));
 }
 

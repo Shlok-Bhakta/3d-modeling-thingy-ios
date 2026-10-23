@@ -20,6 +20,35 @@ INPUT_TUNING = REPOSITORY / "intern" / "ghost" / "intern" / "GHOST_IOSInputTunin
 
 
 class GhostVirtualPointerStateTests(unittest.TestCase):
+    def test_touch_release_does_not_release_a_held_hardware_button(self) -> None:
+        harness = r'''
+            #include "GHOST_IOSVirtualPointerState.hh"
+            #include <cassert>
+            int main() {
+              GHOST_IOSVirtualPointerState state;
+              state.setSource(GHOST_IOSPointerSource::Hardware);
+              state.setButton(GHOST_IOSPointerButton::Left, true);
+              state.setSource(GHOST_IOSPointerSource::Finger);
+              state.setButton(GHOST_IOSPointerButton::Left, true);
+              state.setButton(GHOST_IOSPointerButton::Left, false);
+              assert(state.buttonDown(GHOST_IOSPointerButton::Left) &&
+                     "touch release must preserve a mouse button still held on the device");
+              state.setSource(GHOST_IOSPointerSource::Hardware);
+              state.setButton(GHOST_IOSPointerButton::Left, false);
+              assert(!state.buttonDown(GHOST_IOSPointerButton::Left));
+              return 0;
+            }
+        '''
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'button_ownership.cc'
+            executable = Path(directory) / 'button_ownership'
+            source.write_text(harness)
+            subprocess.run(['xcrun', 'clang++', '-std=c++17', '-I',
+                            str(POINTER_STATE_HEADER.parent), str(source), '-o', str(executable)],
+                           check=True, capture_output=True, text=True)
+            result = subprocess.run([str(executable)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_pointer_state_supports_relative_absolute_and_warped_motion(self) -> None:
         harness = textwrap.dedent(
             r"""
@@ -249,7 +278,7 @@ class GhostVirtualPointerIntegrationTests(unittest.TestCase):
         source = WINDOW_SOURCE.read_text()
         self.assertIn("double_tap_drag_gesture_recognizer.numberOfTapsRequired = 1;", source)
         handler = source[
-            source.rindex("- (void)handleDoubleTapDrag:"): source.rindex("- (void)handleMouseButtonTap:")
+            source.rindex("- (void)handleDoubleTapDrag:"): source.rindex("- (void)handleTwoFingerHold:")
         ]
         self.assertIn("button(GHOST_kButtonMaskLeft, true", handler)
         self.assertIn("moveRelativeTo", handler)
