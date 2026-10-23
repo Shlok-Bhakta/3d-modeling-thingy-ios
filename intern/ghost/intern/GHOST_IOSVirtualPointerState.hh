@@ -176,6 +176,11 @@ class GHOST_IOSVirtualPointerState {
     source_ = source;
   }
 
+  GHOST_IOSPointerSource source() const
+  {
+    return source_;
+  }
+
   bool setButton(const GHOST_IOSPointerButton button, const bool down)
   {
     return setButton(button, down, source_);

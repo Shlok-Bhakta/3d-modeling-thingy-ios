@@ -16,6 +16,9 @@ import time
 
 
 HERE = Path(__file__).resolve().parent
+CASES = ('middle', 'gizmos', 'touch', 'keyboard', 'pan', 'zoom', 'wheel', 'wheel-shift',
+         'wheel-ctrl', 'wheel-shift-ctrl', 'wheel-alt', 'cursor', 'cursor-load', 'click',
+         'sidebar', 'preferences', 'idle', 'button-chord')
 
 
 def run(*args, **kwargs):
@@ -43,15 +46,24 @@ def wait_for(predicate, description, timeout=30):
     raise RuntimeError(f'timed out waiting for {description}')
 
 
-def assert_wheel_zoom(before, after, samples, expected_reports=3):
+def vertical_wheel_reports(before, samples):
     reports = {}
     for sample in samples:
+        # GameController's raw scroll axes rotate with the device. UIKit already
+        # delivers view-oriented scrolling; normalize this independent observer
+        # to the scene orientation before comparing it with Blender's events.
+        axis, sign = {1: ('y', 1), 2: ('y', -1), 3: ('x', -1), 4: ('x', 1)}[
+            sample['platform'].get('interface_orientation', 1)]
         for report in sample['platform'].get('scroll_events', []):
-            if report['time'] >= before['t'] and report['y'] != 0:
-                reports[report['sequence']] = report
-    if len(reports) != expected_reports:
-        raise RuntimeError(f'OS received {len(reports)} of {expected_reports} wheel reports; invalid HID setup')
-    wheel_y = [report['y'] for report in reports.values()]
+            if report['time'] >= before['t'] and report[axis] != 0:
+                reports[report['sequence']] = report[axis] * sign
+    return list(reports.values())
+
+
+def assert_wheel_zoom(before, after, samples, expected_reports=3):
+    wheel_y = vertical_wheel_reports(before, samples)
+    if len(wheel_y) != expected_reports:
+        raise RuntimeError(f'OS received {len(wheel_y)} of {expected_reports} wheel reports; invalid HID setup')
     # The OS may invert physical scroll deltas for Natural Scrolling. Check the
     # delivered delta, then let Blender's ordinary wheel keymap control zoom.
     direction = 1 if wheel_y[0] > 0 else -1
@@ -59,6 +71,7 @@ def assert_wheel_zoom(before, after, samples, expected_reports=3):
     assert (after['distance'] - before['distance']) * direction < -.01, \
         'plain mouse wheel did not zoom in the expected direction'
     assert before['rotation'] == after['rotation'], 'plain mouse wheel rotated the viewport'
+    assert before['view_location'] == after['view_location'], 'plain mouse wheel panned the viewport'
     event_type = 'WHEELUPMOUSE' if direction > 0 else 'WHEELDOWNMOUSE'
     wheel_events = [e['type'] for e in after['events'] if e['type'].startswith('WHEEL')]
     assert wheel_events == [event_type] * expected_reports, \
@@ -68,13 +81,25 @@ def assert_wheel_zoom(before, after, samples, expected_reports=3):
     assert before['pointer'] == after['pointer'], 'wheel moved the cursor'
 
 
+def assert_modified_wheel(before, after, samples, modifiers):
+    reports = vertical_wheel_reports(before, samples)
+    if len(reports) != 1:
+        raise RuntimeError('OS did not deliver exactly one vertical wheel report; invalid HID setup')
+    wheel = [e for e in after['events'] if e['type'].startswith('WHEEL')]
+    assert len(wheel) == 1, 'modified wheel did not deliver exactly one wheel event'
+    expected_type = 'WHEELUPMOUSE' if reports[0] > 0 else 'WHEELDOWNMOUSE'
+    assert wheel[0]['type'] == expected_type, 'modifier changed the wheel axis or direction'
+    for flag in ('shift', 'ctrl', 'alt', 'oskey'):
+        assert bool(wheel[0][flag]) == (flag in modifiers), f'{flag} was incorrect on the wheel event'
+
+
 def exercise(app: Path, device: str, output: Path, case, kind, method, skip_install=False,
-             record=False, wheel_delta=1, wheel_reports=3):
+             record=False, wheel_delta=1, wheel_reports=3, modifier_side='left', orientation='default'):
     output.mkdir(parents=True, exist_ok=True)
     bundle = plistlib.loads((app / 'Info.plist').read_bytes())['CFBundleIdentifier']
-    if record:
+    if record or case == 'wheel-alt':
         # Establish the headed Simulator's accessory service before connecting
-        # the test mouse, rather than changing services during the replay.
+        # the test mouse. Alt-scroll also needs this headed accessory service.
         run('open', '-a', 'Simulator', '--args', '-CurrentDeviceUDID', device)
     if not skip_install:
         run('xcrun', 'simctl', 'install', device, app)
@@ -100,26 +125,30 @@ def exercise(app: Path, device: str, output: Path, case, kind, method, skip_inst
         HERE / 'tests' / 'hardware_input_observer.m', '-o', observer)
     source = f'PROBE_DIRECTORY={str(folder)!r}\n' + (HERE / 'hardware_input_probe.py').read_text()
     environment = dict(os.environ, SIMCTL_CHILD_DYLD_INSERT_LIBRARIES=str(observer))
+    if orientation == 'landscape':
+        environment['SIMCTL_CHILD_BLENDER_INPUT_LANDSCAPE'] = '1'
     launch = run('xcrun', 'simctl', 'launch', '--terminate-running-process',
                  f'--stdout={folder / "app-stdout.log"}', f'--stderr={folder / "app-stderr.log"}',
                  device, bundle, '--factory-startup', '--python-exit-code', '7',
-                 '--python-expr', f'exec({source!r})', env=environment)
+                 '--python-expr', f'exec({source!r})', env=environment, timeout=90)
     (output / 'launch.log').write_text(launch.stdout + launch.stderr)
     app_pid = int(launch.stdout.strip().rsplit(':', 1)[1])
 
     def ready():
         state = read_json(state_file)
         platform = read_json(platform_file)
+        if platform and platform.get('geometry_error'):
+            raise RuntimeError(platform['geometry_error'])
         return state if (state and state.get('pid') == app_pid and state['ticks'] > 8 and
+                         (orientation != 'landscape' or state['width'] > state['height']) and
                          platform and platform.get('pid') == app_pid) else None
 
     before = wait_for(ready, 'Blender and the OS accessory observer', timeout=90)
     hid_environment = dict(os.environ, DEVELOPER_DIR=run('xcode-select', '-p').stdout.strip())
     if case != 'touch':
-        # Wait for the OS accessory and pointer lock before replaying button transitions.
+        # Wait for the OS accessory before replaying button transitions.
         run(helper, device, input=json.dumps([dict(mouse=[0, 0])]), env=hid_environment)
-        wait_for(lambda: (s := read_json(platform_file)) and s['mice'] and s['locked'],
-                 'the OS mouse connection and pointer lock')
+        wait_for(lambda: (s := read_json(platform_file)) and s['mice'], 'the OS mouse connection')
 
     def fresh(tick):
         def check():
@@ -182,6 +211,30 @@ def exercise(app: Path, device: str, output: Path, case, kind, method, skip_inst
     if not before['pointer'] or any(abs(a-b) > 2 for a,b in zip(before['pointer'], center)):
         raise RuntimeError('virtual cursor did not reach the fixture target')
 
+    def point_at(target):
+        # A real system pointer cannot be warped by Blender. Move the HID mouse
+        # to the target and observe the resulting UIKit/Blender position instead.
+        if read_json(platform_file)['locked']:
+            return configure(warp=target, clear=True)
+        state, _ = replay([dict(mouse=[1, 1], wait=.1)])
+        for _ in range(40):
+            native = read_json(platform_file).get('native_pointer')
+            if native is None:
+                # A Blender warp is not evidence that the OS pointer arrived.
+                state, _ = replay([dict(mouse=[8, 8], wait=.1)])
+                continue
+            position = [native[0], state['height'] - native[1]]
+            dx = target[0] - position[0]
+            dy = position[1] - target[1]
+            if max(abs(dx), abs(dy)) <= 3:
+                return configure(clear=True)
+            state, _ = replay([dict(mouse=[max(-80, min(80, dx / 4)),
+                                           max(-80, min(80, dy / 4))], wait=.1)])
+        raise RuntimeError(f'HID mouse did not reach {target}; last position {state["pointer"]}')
+
+    if case != 'touch':
+        before = point_at(center)
+
     recorder = None
     recording = None
     if record:
@@ -191,11 +244,141 @@ def exercise(app: Path, device: str, output: Path, case, kind, method, skip_inst
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(1)
     try:
-        if case == 'wheel':
+        if case == 'idle':
+            def idled(b, a, samples):
+                assert samples[-1]['platform']['preferred_fps'] <= 30, \
+                    'idle app keeps requesting maximum display callbacks'
+                assert a['ticks'] > b['ticks'], 'idle pacing stopped Blender timers'
             before = configure(clear=True)
-            events = [dict(wheel=[0, wheel_delta], wait=.8) for _ in range(wheel_reports)]
-            assert_case(f'wheel-{wheel_delta}', before, events,
-                        lambda b, a, s: assert_wheel_zoom(b, a, s, expected_reports=wheel_reports))
+            before = assert_case('idle', before, [dict(idle=True, wait=1.5)], idled)
+            after, samples = replay([dict(mouse=[1, 1], wait=.1)])
+            assert samples[-1]['platform']['preferred_fps'] == samples[-1]['platform']['maximum_fps'], \
+                'input did not restore the maximum display rate'
+            assert after['pointer'] != before['pointer'], 'input did not move the cursor after idle'
+            print('PASS: input wakes idle app', flush=True)
+
+        elif case in {'cursor', 'cursor-load'}:
+            if case == 'cursor-load':
+                temporary = folder / 'command.new'
+                temporary.write_text(json.dumps(dict(cycles=True)))
+                temporary.replace(folder / 'command.json')
+            after, samples = replay([dict(mouse=[2, 1], wait=.02) for _ in range(20)] +
+                                    [dict(mouse=[-2, -1], wait=.02) for _ in range(20)])
+            assert all(not s['platform']['locked'] for s in samples), \
+                'ordinary pointing captures raw input and bypasses iPad tracking and acceleration'
+            assert samples[-1]['platform']['raw_motion_callbacks'] == samples[0]['platform']['raw_motion_callbacks'], \
+                'normal pointing still dispatches unused raw mouse callbacks on the main queue'
+            if case == 'cursor':
+                positions = [s['platform']['native_pointer'][0] for s in samples
+                             if s['platform']['native_pointer']]
+                if not positions or max(positions) - min(positions) < 10:
+                    raise RuntimeError('OS pointer did not move through the fixture; invalid HID setup')
+            assert samples[-1]['platform']['custom_arrow'], 'app arrow is not used for system pointing'
+            native = samples[-1]['platform']['native_pointer']
+            expected = [native[0], after['height'] - native[1]]
+            assert max(abs(a - b) for a, b in zip(after['pointer'], expected)) <= 3, \
+                'Blender hit position is out of sync with the native pointer'
+            if case == 'cursor-load':
+                assert after['render_engine'] == 'CYCLES' and after['shading_type'] == 'RENDERED', \
+                    'load fixture did not enter the rendered Cycles viewport'
+            (output / 'cursor.json').write_text(json.dumps(dict(before=before, after=after,
+                                                              samples=samples, result='PASS'), indent=2))
+            print('PASS: cursor uses system tracking', flush=True)
+
+        elif case == 'button-chord':
+            before = configure(preferences=True, clear=True)
+            before = point_at([int(before['width'] * .5), int(before['height'] * .3)])
+            after, samples = replay([dict(mouse=[0, 0], buttons=1, wait=.3),
+                                     dict(mouse=[0, 0], buttons=3, wait=.3),
+                                     dict(mouse=[0, 0], buttons=2, wait=.3),
+                                     dict(mouse=[0, 0], wait=.3)])
+            (output / 'button-chord.json').write_text(json.dumps(dict(before=before, after=after,
+                                                                      samples=samples), indent=2))
+            edges = [(e['type'], e['value']) for e in after['events']
+                     if e['type'] in {'LEFTMOUSE', 'RIGHTMOUSE'} and e['value'] in {'PRESS', 'RELEASE'}]
+            assert edges == [('LEFTMOUSE', 'PRESS'), ('RIGHTMOUSE', 'PRESS'),
+                             ('LEFTMOUSE', 'RELEASE'), ('RIGHTMOUSE', 'RELEASE')], \
+                f'overlapping button holds produced {edges}'
+            print('PASS: overlapping button holds', flush=True)
+
+        elif case == 'preferences':
+            before = configure(preferences=True, clear=True)
+            (output / 'preferences-setup.json').write_text(json.dumps(before, indent=2))
+            run('xcrun', 'simctl', 'io', device, 'screenshot', '/tmp/issue58-preferences.png')
+            (output / 'preferences.png').write_bytes(Path('/tmp/issue58-preferences.png').read_bytes())
+            target = [int(before['width'] * .555), int(before['height'] * .96)]
+            before = point_at(target)
+            for index in range(3):
+                def preference_clicked(b, a, samples):
+                    edges = [e['value'] for e in a['events']
+                             if e['type'] == 'LEFTMOUSE' and e['value'] in {'PRESS', 'RELEASE'}]
+                    assert edges == ['PRESS', 'RELEASE'], f'checkbox click produced {edges}'
+                    assert a['checkbox'] != b['checkbox'], 'Preferences checkbox toggled back on release'
+                assert_case(f'preferences-click-{index + 1}', before,
+                            [dict(mouse=[0, 0], buttons=1, wait=.4),
+                             dict(mouse=[0, 0], wait=.5)], preference_clicked)
+                before = configure(clear=True)
+            before = point_at([int(before['width'] * .971), int(before['height'] * .979)])
+            def native_close(b, a, samples):
+                assert a['window_count'] == 1, 'native Preferences close button did not close the window'
+                assert not any(e['type'] == 'LEFTMOUSE' and e['value'] == 'PRESS'
+                               for e in a['events']), 'native close click also reached Blender'
+            assert_case('native-close', before, [dict(mouse=[0, 0], buttons=1, wait=.4),
+                                               dict(mouse=[0, 0], wait=.5)], native_close)
+
+        elif case in {'click', 'sidebar'}:
+            before = configure(sidebar=True)
+            before = configure(sidebar_category=True, clear=True)
+            x, y, width, height = before['sidebar']
+            target = [int(x + width * .4), int(y + height - 85)]
+            before = point_at(target)
+            if case == 'click':
+                def clicked(b, a, samples):
+                    edges = [(e['type'], e['value']) for e in a['events']
+                             if e['type'] == 'LEFTMOUSE' and e['value'] in {'PRESS', 'RELEASE'}]
+                    assert edges == [('LEFTMOUSE', 'PRESS'), ('LEFTMOUSE', 'RELEASE')], \
+                        f'one physical click produced {edges}'
+                    assert a['checkbox'] != b['checkbox'], 'checkbox did not remain toggled after release'
+                assert_case('checkbox', before, [dict(mouse=[0, 0], buttons=1, wait=.4),
+                                               dict(mouse=[0, 0], wait=.4)], clicked)
+            else:
+                def scrolled(b, a, samples):
+                    assert b['sidebar_view'] != a['sidebar_view'], 'mouse wheel did not scroll the sidebar'
+                    assert b['distance'] == a['distance'], 'sidebar wheel zoomed the viewport'
+                assert_case('sidebar', before, [dict(wheel=[0, 1], wait=.4)], scrolled)
+
+        elif case in {'wheel-shift', 'wheel-ctrl', 'wheel-shift-ctrl', 'wheel-alt'}:
+            before = configure(clear=True)
+            if case == 'wheel-shift':
+                before = configure(graph_editor=True, clear=True)
+                x, y, width, height = before['timeline']
+                before = point_at([int(x + width / 2), int(y + height / 2)])
+            elif case == 'wheel-ctrl':
+                x, y, width, height = before['timeline']
+                before = point_at([int(x + width / 2), int(y + height / 2)])
+            modifiers = case.split('-')[1:]
+            usages = {'shift': 0xe1, 'ctrl': 0xe0, 'alt': 0xe2}
+            if modifier_side == 'right':
+                usages = {name: usage + 4 for name, usage in usages.items()}
+            events = [dict(key=usages[m], phase=1, wait=.2) for m in modifiers]
+            events += [dict(wheel=[0, wheel_delta], wait=.5)]
+            events += [dict(key=usages[m], phase=2, wait=.4) for m in reversed(modifiers)]
+            def modified_wheel(b, a, samples):
+                assert_modified_wheel(b, a, samples, modifiers)
+                if case == 'wheel-shift':
+                    assert b['timeline_view'][1] != a['timeline_view'][1], 'Shift-wheel did not pan the graph vertically'
+                elif case == 'wheel-ctrl':
+                    assert b['timeline_view'][0] != a['timeline_view'][0], 'Ctrl-wheel did not pan the timeline'
+                elif case == 'wheel-alt':
+                    assert abs(a['frame_current'] - b['frame_current']) == 1, 'Alt-wheel did not step the frame'
+            assert_case(case, before, events, modified_wheel)
+
+        elif case in {'wheel', 'wheel-sweep'}:
+            for delta in ((1, -1, .25, -12) if case == 'wheel-sweep' else (wheel_delta,)):
+                before = configure(setup=kind, clear=True)
+                events = [dict(wheel=[0, delta], wait=.8) for _ in range(wheel_reports)]
+                assert_case(f'wheel-{delta}', before, events,
+                            lambda b, a, s: assert_wheel_zoom(b, a, s, expected_reports=wheel_reports))
 
         elif case == 'middle':
             def orbit_assertion(before, after, samples):
@@ -220,6 +403,9 @@ def exercise(app: Path, device: str, output: Path, case, kind, method, skip_inst
 
         elif case in {'gizmos', 'touch'}:
             def gizmo_assertion(before, after, samples):
+                if case == 'gizmos' and not any(any(m['left'] for m in s['platform']['mice'])
+                                                for s in samples):
+                    raise RuntimeError('OS did not receive the left press; invalid HID setup')
                 assert abs(after['location'][0] - before['location'][0]) > .05, \
                     'gizmo drag did not move the object/bone'
                 assert abs(after['location'][1]) < .01 and abs(after['location'][2]) < .01, \
@@ -243,6 +429,8 @@ def exercise(app: Path, device: str, output: Path, case, kind, method, skip_inst
             modifier = 0xe1 if case == 'pan' else 0xe0
             flag = 'shift' if case == 'pan' else 'ctrl'
             def navigation_assertion(before, after, samples):
+                if not any(any(m['middle'] for m in s['platform']['mice']) for s in samples):
+                    raise RuntimeError('OS did not receive the middle press; invalid HID setup')
                 assert any(e['type'] == 'MIDDLEMOUSE' and e['value'] == 'PRESS' and e[flag]
                            for e in after['events']), f'{flag} was lost on middle-button navigation'
                 if case == 'pan':
@@ -293,13 +481,16 @@ def main():
     parser.add_argument('--app', required=True, type=Path)
     parser.add_argument('--device', help='Use an existing booted test simulator')
     parser.add_argument('--output', required=True, type=Path)
-    parser.add_argument('--case', action='append', choices=['middle','gizmos','touch','keyboard','pan','zoom','wheel'])
+    parser.add_argument('--case', action='append', choices=(*CASES, 'wheel-sweep'))
     parser.add_argument('--fixture', choices=['cube', 'pose'])
     parser.add_argument('--orbit-method', choices=['TURNTABLE', 'TRACKBALL'])
     parser.add_argument('--wheel-delta', type=float, default=1,
                         help='Vertical wheel delta, including negative or fractional values')
     parser.add_argument('--wheel-reports', type=int, default=3,
                         help='Expected wheel reports; use 1 to isolate simulator delivery problems')
+    parser.add_argument('--modifier-side', choices=['left', 'right'], default='left',
+                        help='Keyboard side for modifier-wheel fixtures')
+    parser.add_argument('--orientation', choices=['default', 'landscape'], default='default')
     parser.add_argument('--record', action='store_true', help='Record each ready fixture to demo.mp4')
     parser.add_argument('--skip-install', action='store_true', help='Use an already installed build')
     parser.add_argument('--restart-between-cases', action='store_true',
@@ -321,7 +512,7 @@ def main():
             run('xcrun', 'simctl', 'boot', device)
             run('xcrun', 'simctl', 'bootstatus', device, '-b')
         scenarios = []
-        for case in args.case or ['middle', 'gizmos', 'touch', 'keyboard', 'pan', 'zoom', 'wheel']:
+        for case in args.case or CASES:
             if case == 'middle':
                 scenarios += [(case, 'cube', method) for method in
                               ([args.orbit_method] if args.orbit_method else ('TURNTABLE', 'TRACKBALL'))]
@@ -338,7 +529,7 @@ def main():
             name = f'{case}-{method.lower()}' if case == 'middle' else f'{case}-{kind}'
             exercise(args.app.resolve(), device, args.output.resolve() / name,
                      case, kind, method, args.skip_install or index > 0, args.record,
-                     args.wheel_delta, args.wheel_reports)
+                     args.wheel_delta, args.wheel_reports, args.modifier_side, args.orientation)
     finally:
         if owned and device:
             run('xcrun', 'simctl', 'shutdown', device)

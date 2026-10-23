@@ -31,16 +31,18 @@ class GhostHardwareInputTests(unittest.TestCase):
         self.assertIn("- (BOOL)prefersPointerLocked", self.source)
 
     def test_mouse_wheel_uses_native_wheel_events(self) -> None:
-        handler = self.pointer_source.split('input.scroll.valueChangedHandler = ^', 1)[1]
-        handler = handler.split('updatePointerLockPreference();', 1)[0]
+        handler = self.source.rsplit('- (void)handlePointerScroll:', 1)[1]
+        handler = handler.split('- (void)handleEdgeSwipe:', 1)[0]
         self.assertIn('GHOST_EventWheel', handler)
         self.assertIn('GHOST_kEventWheelAxisVertical', handler)
         self.assertIn('GHOST_kEventWheelAxisHorizontal', handler)
-        self.assertNotIn('GHOST_EventTrackpad', handler)
+        self.assertIn('sender == wheel_gesture_recognizer', handler)
+        self.assertIn('UIScrollTypeMaskDiscrete', self.source)
+        self.assertNotIn('input.scroll.valueChangedHandler = ^', self.pointer_source)
 
     def test_pointer_scroll_generates_a_trackpad_scroll_event(self) -> None:
         self.assertIn("scroll_gesture_recognizer", self.source)
-        self.assertIn("allowedScrollTypesMask = UIScrollTypeMaskAll", self.source)
+        self.assertIn("allowedScrollTypesMask = UIScrollTypeMaskContinuous", self.source)
         self.assertIn("POINTER_SCROLL", self.source)
         self.assertIn("GHOST_kTrackpadEventScroll", self.source)
 

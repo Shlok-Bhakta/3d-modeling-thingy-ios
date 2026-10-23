@@ -19,6 +19,7 @@
 #include "GHOST_EventKey.hh"
 #include "GHOST_EventTouch.hh"
 #include "GHOST_EventTrackpad.hh"
+#include "GHOST_EventWheel.hh"
 #include "GHOST_WindowManager.hh"
 
 #import <GameController/GameController.h>
@@ -349,6 +350,7 @@ typedef struct UserInputEvent {
   GHOSTUIPanGestureRecognizer *pan2f_gesture_recognizer;
   GHOSTUIPanGestureRecognizer *pan3f_gesture_recognizer;
   GHOSTUIPanGestureRecognizer *scroll_gesture_recognizer;
+  GHOSTUIPanGestureRecognizer *wheel_gesture_recognizer;
   GHOSTUIPinchGestureRecognizer *zoom_gesture_recognizer;
   GHOSTUIHoverGestureRecognizer *hover_gesture_recognizer;
   bool two_finger_hold_active;
@@ -414,6 +416,7 @@ typedef struct UserInputEvent {
 - (void)handlePan2f:(GHOSTUIPanGestureRecognizer *)sender;
 - (void)handlePan3f:(GHOSTUIPanGestureRecognizer *)sender;
 - (void)handlePointerScroll:(GHOSTUIPanGestureRecognizer *)sender;
+- (void)synchronizePointerModifiers:(UIKeyModifierFlags)flags;
 - (void)handleZoom:(GHOSTUIPinchGestureRecognizer *)sender;
 - (void)updateTabletDataFromTouch:(UITouch *)touch;
 - (void)resetTabletData;
@@ -651,6 +654,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   [self releaseGestureRecognizer:pan2f_gesture_recognizer fromView:input_view];
   [self releaseGestureRecognizer:pan3f_gesture_recognizer fromView:input_view];
   [self releaseGestureRecognizer:scroll_gesture_recognizer fromView:input_view];
+  [self releaseGestureRecognizer:wheel_gesture_recognizer fromView:input_view];
   [self releaseGestureRecognizer:zoom_gesture_recognizer fromView:input_view];
   [self releaseGestureRecognizer:hover_gesture_recognizer fromView:input_view];
   [self releaseGestureRecognizer:edge_swipe_left fromView:input_view];
@@ -667,6 +671,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   pan2f_gesture_recognizer = nil;
   pan3f_gesture_recognizer = nil;
   scroll_gesture_recognizer = nil;
+  wheel_gesture_recognizer = nil;
   zoom_gesture_recognizer = nil;
   hover_gesture_recognizer = nil;
   edge_swipe_left = nil;
@@ -863,6 +868,34 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   }
 }
 
+- (void)synchronizePointerModifiers:(UIKeyModifierFlags)flags
+{
+  GHOST_ModifierKeys keys;
+  system->getModifierKeys(keys);
+  struct ModifierPair {
+    UIKeyModifierFlags flag;
+    GHOST_TModifierKey left, right;
+  };
+  constexpr ModifierPair pairs[] = {
+      {UIKeyModifierShift, GHOST_kModifierKeyLeftShift, GHOST_kModifierKeyRightShift},
+      {UIKeyModifierControl, GHOST_kModifierKeyLeftControl, GHOST_kModifierKeyRightControl},
+      {UIKeyModifierAlternate, GHOST_kModifierKeyLeftAlt, GHOST_kModifierKeyRightAlt},
+      {UIKeyModifierCommand, GHOST_kModifierKeyLeftOS, GHOST_kModifierKeyRightOS},
+  };
+  for (const ModifierPair &pair : pairs) {
+    if ((flags & pair.flag) == 0) {
+      for (const GHOST_TModifierKey key : {pair.left, pair.right}) {
+        if (keys.get(key)) {
+          [self generateKeyEvent:GHOST_ModifierKeys::getModifierKeyCode(key) down:false utf8:nullptr];
+        }
+      }
+    }
+    else if (!keys.get(pair.left) && !keys.get(pair.right)) {
+      [self generateKeyEvent:GHOST_ModifierKeys::getModifierKeyCode(pair.left) down:true utf8:nullptr];
+    }
+  }
+}
+
 - (void)pressesBegan:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)event
 {
   (void)event;
@@ -1019,15 +1052,24 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   pan3f_gesture_recognizer.allowedTouchTypes = @[@(UITouchTypeDirect)];
   [window->getView() addGestureRecognizer:pan3f_gesture_recognizer];
 
-  /* Mouse wheels and trackpads arrive as UIKit scroll-type pan gestures. */
+  /* Keep discrete wheels separate from continuous trackpad gestures. Blender's
+   * wheel keymap zooms the viewport and scrolls UI panels; trackpad pan orbits. */
   scroll_gesture_recognizer = [[GHOSTUIPanGestureRecognizer alloc]
       initWithTarget:self
               action:@selector(handlePointerScroll:)];
   scroll_gesture_recognizer.delegate = self;
   scroll_gesture_recognizer.cancelsTouchesInView = false;
   scroll_gesture_recognizer.allowedTouchTypes = @[];
-  scroll_gesture_recognizer.allowedScrollTypesMask = UIScrollTypeMaskAll;
+  scroll_gesture_recognizer.allowedScrollTypesMask = UIScrollTypeMaskContinuous;
   [window->getView() addGestureRecognizer:scroll_gesture_recognizer];
+
+  wheel_gesture_recognizer = [[GHOSTUIPanGestureRecognizer alloc]
+      initWithTarget:self action:@selector(handlePointerScroll:)];
+  wheel_gesture_recognizer.delegate = self;
+  wheel_gesture_recognizer.cancelsTouchesInView = false;
+  wheel_gesture_recognizer.allowedTouchTypes = @[];
+  wheel_gesture_recognizer.allowedScrollTypesMask = UIScrollTypeMaskDiscrete;
+  [window->getView() addGestureRecognizer:wheel_gesture_recognizer];
 
   /* Pinch/Zoom gesture recognizer. */
   zoom_gesture_recognizer = [[GHOSTUIPinchGestureRecognizer alloc]
@@ -1172,13 +1214,24 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
 - (void)sendEvent:(UIEvent *)event
 {
   if (window != nullptr && virtual_pointer != nullptr && !onscreen_keyboard_active &&
-      !virtual_pointer->usesHardwareMouse() && event.type == UIEventTypeTouches &&
+      !virtual_pointer->usesRelativeMouse() && event.type == UIEventTypeTouches &&
       self.rootViewController.presentedViewController == nil)
   {
     UIView *canvas = window->getView();
     for (UITouch *touch in event.allTouches) {
-      if (touch.type != UITouchTypeIndirectPointer ||
-          !(touch.view == canvas || [touch.view isDescendantOfView:canvas]) ||
+      if (touch.type != UITouchTypeIndirectPointer) {
+        continue;
+      }
+      if (touch.phase == UITouchPhaseEnded || touch.phase == UITouchPhaseCancelled) {
+        /* UIKit's mask includes the button being released, and the ended touch
+         * may no longer have a view. End the held sequence before hit testing.
+         * Pointer capture can cancel UIKit's touch while the button stays down. */
+        if (touch.phase != UITouchPhaseCancelled || !virtual_pointer->wantsPointerLock()) {
+          virtual_pointer->hardwareButtons(0);
+        }
+        continue;
+      }
+      if (!(touch.view == canvas || [touch.view isDescendantOfView:canvas]) ||
           (close_window_button != nil &&
            (touch.view == close_window_button ||
             [touch.view isDescendantOfView:close_window_button])) ||
@@ -1189,7 +1242,24 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
       CGPoint point = [touch locationInView:canvas];
       point = window->scalePointToWindow(point);
       virtual_pointer->moveAbsolute(point.x, point.y, GHOST_IOSPointerSource::Hardware);
-      virtual_pointer->hardwareButtons(touch.phase == UITouchPhaseCancelled ? 0 : event.buttonMask);
+      /* UIKit owns normal pointing and buttons, including hit testing against native
+       * controls. GameController takes over only while the pointer is captured. */
+      unsigned int buttons = event.buttonMask;
+      if (GCMouse.mice.count != 0) {
+        /* During a multi-button sequence UIKit's mask is the union of the buttons
+         * before and after a change. The physical profile identifies partial
+         * releases, such as releasing left while right remains held. */
+        buttons = 0;
+        for (GCMouse *mouse in GCMouse.mice) {
+          buttons |= mouse.mouseInput.leftButton.isPressed ? 1u : 0u;
+          buttons |= mouse.mouseInput.rightButton.isPressed ? 2u : 0u;
+          buttons |= mouse.mouseInput.middleButton.isPressed ? 4u : 0u;
+        }
+        if (touch.phase == UITouchPhaseBegan) {
+          buttons |= event.buttonMask;
+        }
+      }
+      virtual_pointer->hardwareButtons(buttons);
       break;
     }
   }
@@ -1500,11 +1570,6 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
 
 - (void)handlePointerScroll:(GHOSTUIPanGestureRecognizer *)sender
 {
-  if (virtual_pointer->usesHardwareMouse()) {
-    [sender setCachedTranslation:CGPointZero];
-    return;
-  }
-
   if (sender.state == UIGestureRecognizerStateBegan ||
       sender.state == UIGestureRecognizerStateChanged)
   {
@@ -1513,6 +1578,29 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
     [sender setCachedTranslation:translation];
 
     if (!CGPointEqualToPoint(relative_translation, CGPointZero)) {
+      /* UIKit can consume standalone modifier presses and remap Shift-wheel to
+       * the horizontal axis. Reconcile the event's modifier snapshot before
+       * queuing wheel events, then undo that axis remapping like Cocoa does. */
+      [self synchronizePointerModifiers:sender.modifierFlags];
+      if (sender == wheel_gesture_recognizer) {
+        CGFloat x = relative_translation.x;
+        CGFloat y = relative_translation.y;
+        if ((sender.modifierFlags & UIKeyModifierShift) && y == 0.0) {
+          /* UIKit's horizontal and vertical translations have opposite signs
+           * for the same physical wheel report after Shift remapping. */
+          y = -x;
+          x = 0.0;
+        }
+        if (x != 0.0) {
+          system->pushEvent(std::make_unique<GHOST_EventWheel>(
+              system->getMilliSeconds(), window, GHOST_kEventWheelAxisHorizontal, x > 0 ? 1 : -1));
+        }
+        if (y != 0.0) {
+          system->pushEvent(std::make_unique<GHOST_EventWheel>(
+              system->getMilliSeconds(), window, GHOST_kEventWheelAxisVertical, y > 0 ? 1 : -1));
+        }
+        return;
+      }
       CGPoint pointer_location = [self getVirtualPointerPoint];
       UserInputEvent event_info(&pointer_location, &relative_translation, nullptr);
       event_info.add_event(UserInputEvent::EventTypes::POINTER_SCROLL);
@@ -1555,7 +1643,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
 
 - (void)handleHover:(GHOSTUIHoverGestureRecognizer *)sender
 {
-  if ([sender getTouchType] != UITouchTypePencil && virtual_pointer->usesHardwareMouse()) {
+  if ([sender getTouchType] != UITouchTypePencil && virtual_pointer->usesRelativeMouse()) {
     return;
   }
 
@@ -2100,7 +2188,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   GHOSTUIWindow *input_window = (GHOSTUIWindow *)self.view.window;
   GHOST_SystemIOS *system = static_cast<GHOST_SystemIOS *>(GHOST_ISystem::getSystem());
   return system != nullptr && system->virtualPointer() != nullptr &&
-         system->virtualPointer()->hasHardwareMouse() &&
+         system->virtualPointer()->wantsPointerLock() &&
          [input_window allowsPointerLock];
 }
 
@@ -2318,6 +2406,7 @@ void *GHOST_WindowIOS::getOSWindow() const
 
 GHOST_TSuccess GHOST_WindowIOS::swapBufferRelease()
 {
+  noteActivity();
   deferred_swap_buffers_ = true;
   return GHOST_kSuccess;
 }
@@ -2364,6 +2453,23 @@ void GHOST_WindowIOS::endFrame()
 {
   GHOSTUIWindow *ui_window = (GHOSTUIWindow *)rootWindow;
   [ui_window endFrame];
+  /* Poll timers at 30 Hz while nothing is changing. Input and every requested
+   * redraw restore the display's full rate, including animation and Cycles. */
+  if (system_ios_->getMilliSeconds() - last_activity_ms_ >= 750) {
+    const NSInteger idle_fps = std::min<NSInteger>(30, rootWindow.screen.maximumFramesPerSecond);
+    if (metal_view_.preferredFramesPerSecond != idle_fps) {
+      metal_view_.preferredFramesPerSecond = idle_fps;
+    }
+  }
+}
+
+void GHOST_WindowIOS::noteActivity()
+{
+  last_activity_ms_ = system_ios_->getMilliSeconds();
+  const NSInteger active_fps = rootWindow.screen.maximumFramesPerSecond;
+  if (metal_view_.preferredFramesPerSecond != active_fps) {
+    metal_view_.preferredFramesPerSecond = active_fps;
+  }
 }
 
 void GHOST_WindowIOS::setTitle(const char *title)
@@ -2710,6 +2816,7 @@ bool GHOST_WindowIOS::makeKeyWindow()
   [rootWindow becomeFirstResponder];
   /* Enable the drawInMTKView() calls for this window. */
   metal_view_.paused = NO;
+  noteActivity();
 
   IOS_WINDOW_LOG(@"Key Window: (ui_View)%p (mtkView)%p con(%p) (win=%p)",
                  uiview_,

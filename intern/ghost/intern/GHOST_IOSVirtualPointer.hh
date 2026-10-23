@@ -51,6 +51,8 @@ class GHOST_IOSVirtualPointer {
   void hardwareButtons(unsigned int mask);
   bool hasHardwareMouse() const;
   bool usesHardwareMouse() const;
+  bool usesRelativeMouse() const;
+  bool wantsPointerLock() const;
 
   void getClientPosition(double &x, double &y) const;
   GHOST_TSuccess getCursorPosition(int32_t &screen_x, int32_t &screen_y) const;

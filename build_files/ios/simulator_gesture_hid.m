@@ -118,6 +118,9 @@ int main(int argc, char **argv)
     }
     for (NSDictionary *e in events) {
       usleep([e[@"wait"] doubleValue] * 1000000);
+      if ([e[@"idle"] boolValue]) {
+        continue;
+      }
       if (e[@"wheel"]) {
         if (!mouse_created || !scroll_event || !wrap_scroll) {
           NSLog(@"mouse wheel requires a connected mouse and scroll symbols");
