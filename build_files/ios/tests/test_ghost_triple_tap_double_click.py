@@ -30,7 +30,7 @@ class GhostTripleTapDoubleClickTests(unittest.TestCase):
     def test_triple_tap_emits_two_left_clicks_at_the_virtual_cursor(self) -> None:
         handler = self.source[
             self.source.rindex("- (void)handleTripleTap:") :
-            self.source.rindex("- (void)handleMouseButtonTap:")
+            self.source.rindex("- (void)handleTwoFingerHold:")
         ]
 
         self.assertEqual(handler.count("virtual_pointer->click(GHOST_kButtonMaskLeft)"), 2)

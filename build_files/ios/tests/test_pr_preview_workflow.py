@@ -3,6 +3,9 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 from pathlib import Path
+import os
+import subprocess
+import tempfile
 import unittest
 
 
@@ -30,6 +33,24 @@ OPENCOLORIO_RECIPE = (
 
 
 class PrPreviewWorkflowTests(unittest.TestCase):
+    def test_preview_from_main_can_publish_without_a_parent_pr(self) -> None:
+        workflow = WORKFLOW.read_text()
+        start = workflow.index('          previous_pr="$(')
+        end = workflow.index('          short_sha=', start)
+        script = workflow[start:end] + '\nprintf "%s" "$parent_description"'
+        with tempfile.TemporaryDirectory() as directory:
+            gh = Path(directory) / 'gh'
+            env = dict(os.environ, PATH=directory + ':' + os.environ['PATH'],
+                       BASE_REF='main', GITHUB_REPOSITORY='owner/repo')
+            for parent, expected in (('', 'based on main'), ('41', 'stacked on #41')):
+                with self.subTest(parent=parent):
+                    gh.write_text('#!/bin/sh\nprintf "%s" "' + parent + '"\n')
+                    gh.chmod(0o755)
+                    result = subprocess.run(['bash', '-ec', script], env=env,
+                                            capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(result.stdout, expected)
+
     def test_cancels_obsolete_preview_builds(self) -> None:
         workflow = WORKFLOW.read_text()
         self.assertIn("cancel-in-progress: true", workflow)
@@ -157,16 +178,18 @@ class PrPreviewWorkflowTests(unittest.TestCase):
         workflow = WORKFLOW.read_text()
         self.assertIn("submodule.lib/macos_arm64.update=checkout", workflow)
 
-    def test_runs_portable_file_access_regressions_before_building(self) -> None:
+    def test_runs_portable_input_and_file_access_regressions_before_building(self) -> None:
         workflow = WORKFLOW.read_text()
         regression_step = workflow.split(
-            "- name: Run portable iOS file-access regression tests", 1
+            "- name: Run portable iOS input and file-access regression tests", 1
         )[1].split("- name: Build revision-matched native tools on cache miss", 1)[0]
 
         for test_file in (
             "test_ghost_file_access.py",
             "test_simulator_file_access.py",
             "test_file_access_runtime.py",
+            "test_ghost_hardware_input.py",
+            "test_ghost_virtual_pointer.py",
             "test_pr_preview_workflow.py",
         ):
             self.assertIn(test_file, regression_step)
