@@ -693,3 +693,74 @@ on the iPad Pro simulator selected the default cube and dragged it from zero to
 approximately `(0.61, 3.45, 1.67)` with Blender's Move operator. Independent
 two- and three-finger injection, transform gizmos, and custom gizmos remain
 physical-device acceptance checks.
+
+## ADR-0034: Keep user settings in a Files-visible Settings folder
+
+- Status: accepted; simulator migration, fresh install and update paths verified
+- Date: 2026-10-25
+
+`GHOST_SystemPathsCocoa::getUserDir` on iOS now returns
+`Documents/Settings/<version>` instead of the hidden
+`Library/Application Support/Blender/<version>`. `Documents` is already shared
+with the Files app, so people can bring preferences, add-ons, extensions and
+startup files from a computer by copying a version folder. The layout matches
+desktop Blender on every platform.
+
+On first use the old folder is renamed into place inside the container. If the
+rename fails, the old folder stays in use, and nothing is ever deleted. The
+GHOST path stays per-version and doesn't use `BLENDER_USER_RESOURCES`, because
+that override disables Blender's "Load Previous Settings" path for app
+updates. The app also doesn't write preferences itself: Quick Setup's
+**Continue** saves the tuned iOS defaults, and writing them earlier would hide
+both Quick Setup and the previous-version offer.
+
+`build_files/ios/simulator_settings_location.py` runs three real launches:
+migrating the hidden folder (a user startup script runs from the new place),
+a fresh install, and an update where Blender offers and copies the previous
+version's saved preferences.
+
+## ADR-0035: Add on-screen Shift, Ctrl and Alt in GHOST
+
+- Status: accepted; simulator acceptance passes, physical feel pending
+- Date: 2026-10-25
+
+Touch and Pencil users had no way to hold a modifier key (issue #57). The
+on-screen keys are a native UIKit view owned by the iOS GHOST window, not a
+Blender UI region, because Blender sees a single pointer and a finger held on a
+Blender-drawn button would move the cursor. The view only reports key touches;
+`GHOST_IOSModifierLatch` decides what Blender sees:
+
+- Holding a key presses it immediately, like a keyboard, including mid-drag.
+- Tapping applies it to the next pointer press only.
+- Double tapping keeps it on until tapped again.
+
+Latched and locked keys are pressed just before a pointer button and released
+after the last button, from the virtual pointer's button path. Navigation
+gestures between clicks therefore keep their normal meaning. Hardware pointer
+modifier snapshots don't release keys the belt holds.
+
+The belt collapses to a handle that can be dragged to any corner and remembers
+it. It hides while a hardware keyboard is connected; `GHOST_IOS_MODIFIER_BELT=always`
+keeps it, which the Simulator needs because it always reports a keyboard.
+`build_files/ios/simulator_modifier_belt.py` records the modifiers on real
+Blender clicks for latched, locked and combined keys and checks the stored
+corner.
+
+## ADR-0036: Ignore Pencil hover while the tip is down
+
+- Status: accepted; logic tests pass, physical hover hardware pending
+- Date: 2026-10-25
+
+Issue #61 reports Pencil strokes snapping back to their start when the tip
+lifts on an M5 iPad with Apple Pencil Pro. Those iPads report Pencil hover. The
+hover handler moved the cursor and cleared the tablet data with no regard for
+contact, and the last hover location is the point where the stroke began. A
+hover update delivered before the stroke's button release therefore drags the
+stroke back to its start. Devices without hover, such as the M1 iPad Pro, can't
+show the problem.
+
+`GHOST_IOSPencilContact` tracks the tip from the window's Pencil touches and
+the drag recognizer. Hover is ignored until both the touch and the stroke have
+ended, and the stroke ends at the tip's last real location. The Simulator can't
+inject Pencil or hover input, so coverage is the pure contact-state tests plus
+source checks; the fix needs confirmation on hover-capable hardware.

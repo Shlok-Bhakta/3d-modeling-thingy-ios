@@ -335,6 +335,13 @@ class GHOST_WindowIOS : public GHOST_Window {
   void beginFrame();
   void endFrame();
   void noteActivity();
+  /**
+   * Apply the on-screen modifier keys around pointer buttons: call with true before a press
+   * reaches Blender and with false after the last release.
+   */
+  void modifierBeltPointerButton(bool pressed);
+  /** The app-drawn cursor moved, in view points. */
+  void modifierBeltCursorMoved(double x, double y, bool visible);
   bool hasDeferredSwapBuffers() const
   {
     return deferred_swap_buffers_;

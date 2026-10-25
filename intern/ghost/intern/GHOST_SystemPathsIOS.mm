@@ -8,6 +8,7 @@
 #include <string>
 
 #include "GHOST_Debug.hh"
+#include "GHOST_IOSSettingsLocation.hh"
 #include "GHOST_SystemPathsCocoa.hh"
 
 /* --------------------------------------------------------------------
@@ -42,10 +43,41 @@ const char *GHOST_SystemPathsCocoa::getSystemDir(int /* version */, const char *
   return GetApplicationSupportDir(versionstr, NSLocalDomainMask, tempPath, sizeof(tempPath));
 }
 
+/**
+ * User settings live in `Documents/Settings` so they show up in the Files app, where people can
+ * bring preferences, add-ons and extensions from a computer. The folder is resolved once, moving
+ * the hidden `Application Support/Blender` folder used by earlier builds.
+ */
+static NSString *IOS_user_settings_root()
+{
+  static NSString *root_path = nil;
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    @autoreleasepool {
+      NSFileManager *file_manager = [NSFileManager defaultManager];
+      NSURL *documents_url = [file_manager URLsForDirectory:NSDocumentDirectory
+                                                  inDomains:NSUserDomainMask]
+                                 .firstObject;
+      NSURL *support_url = [file_manager URLsForDirectory:NSApplicationSupportDirectory
+                                                inDomains:NSUserDomainMask]
+                               .firstObject;
+      NSURL *legacy_url = [support_url URLByAppendingPathComponent:@"Blender" isDirectory:YES];
+      NSURL *root_url = GHOST_IOSSettings_prepareRoot(documents_url, legacy_url);
+      root_path = [root_url.path copy];
+    }
+  });
+  return root_path;
+}
+
 const char *GHOST_SystemPathsCocoa::getUserDir(int /* version */, const char *versionstr) const
 {
   static char tempPath[512] = "";
-  return GetApplicationSupportDir(versionstr, NSUserDomainMask, tempPath, sizeof(tempPath));
+  NSString *root_path = IOS_user_settings_root();
+  if (root_path == nil) {
+    return nullptr;
+  }
+  snprintf(tempPath, sizeof(tempPath), "%s/%s", root_path.fileSystemRepresentation, versionstr);
+  return tempPath;
 }
 
 std::optional<std::string> GHOST_SystemPathsCocoa::getUserSpecialDir(

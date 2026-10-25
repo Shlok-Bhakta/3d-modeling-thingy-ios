@@ -11,6 +11,9 @@
 #include "GHOST_ContextIOS.hh"
 #include "GHOST_IOSFileAccess.hh"
 #include "GHOST_IOSInputTuning.hh"
+#include "GHOST_IOSModifierBelt.hh"
+#include "GHOST_IOSModifierLatch.hh"
+#include "GHOST_IOSPencilContact.hh"
 #include "GHOST_IOSVirtualPointer.hh"
 #include "GHOST_SystemIOS.hh"
 
@@ -331,8 +334,10 @@ typedef struct UserInputEvent {
 @end
 
 /* GHOSTUIWindow interface. */
-@interface GHOSTUIWindow :
-    UIWindow <UIGestureRecognizerDelegate, UIPencilInteractionDelegate, UITextFieldDelegate>
+@interface GHOSTUIWindow : UIWindow <UIGestureRecognizerDelegate,
+                                      UIPencilInteractionDelegate,
+                                      UITextFieldDelegate,
+                                      GHOSTIOSModifierBeltDelegate>
 {
   GHOST_SystemIOS *system;
   GHOST_WindowIOS *window;
@@ -362,6 +367,7 @@ typedef struct UserInputEvent {
   /* Data from the Apple pencil */
   UITouch *current_pencil_touch;
   GHOST_TabletData tablet_data;
+  GHOST_IOSPencilContact pencil_contact;
 
   /* Keyboard handling. */
   UITextField *text_field;
@@ -383,12 +389,19 @@ typedef struct UserInputEvent {
   /* Native controls for Blender child windows. */
   UIButton *close_window_button;
   NSObject *file_access_controls;
+
+  /* On-screen Shift, Ctrl and Alt. */
+  NSObject *modifier_belt;
+  GHOST_IOSModifierLatch *modifier_latch;
 }
 
 - (void)setSystemAndWindowIOS:(GHOST_SystemIOS *)sysCocoa windowIOS:(GHOST_WindowIOS *)winCocoa;
 
 /* Window controls. */
 - (void)registerWindowControls;
+- (void)registerModifierBelt;
+- (void)modifierBeltPointerButton:(bool)pressed;
+- (void)modifierBeltCursorMoved:(CGPoint)point visible:(bool)visible;
 - (void)updateFileAccessControls;
 - (void)handleCloseWindow;
 - (BOOL)allowsPointerLock;
@@ -612,6 +625,8 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   toolbar = nil;
   close_window_button = nil;
   file_access_controls = nil;
+  modifier_belt = nil;
+  modifier_latch = new GHOST_IOSModifierLatch();
 }
 
 - (void)releaseGestureRecognizer:(UIGestureRecognizer *)recognizer fromView:(UIView *)view
@@ -632,6 +647,11 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
 
   GHOST_IOSFileAccess_destroyControls(file_access_controls);
   file_access_controls = nil;
+
+  GHOST_IOSModifierBelt_destroy(modifier_belt);
+  modifier_belt = nil;
+  delete modifier_latch;
+  modifier_latch = nullptr;
 
   if (close_window_button != nil) {
     [close_window_button removeTarget:self
@@ -725,6 +745,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
 
   current_pencil_touch = nil;
   tablet_data = GHOST_TABLET_DATA_NONE;
+  pencil_contact.reset();
   system = nullptr;
   window = nullptr;
   virtual_pointer = nullptr;
@@ -775,6 +796,111 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
                                                             window->rootWindow.rootViewController,
                                                             close_window_button,
                                                             window->getTitle().c_str());
+}
+
+- (void)registerModifierBelt
+{
+  if (window == nullptr || modifier_belt != nil) {
+    return;
+  }
+  modifier_belt = GHOST_IOSModifierBelt_create(window->getView(), self);
+}
+
+static GHOST_TModifierKey IOS_belt_modifier_key(const GHOST_IOSModifier modifier)
+{
+  switch (modifier) {
+    case GHOST_IOSModifier::Shift:
+      return GHOST_kModifierKeyLeftShift;
+    case GHOST_IOSModifier::Control:
+      return GHOST_kModifierKeyLeftControl;
+    case GHOST_IOSModifier::Alt:
+      return GHOST_kModifierKeyLeftAlt;
+  }
+  return GHOST_kModifierKeyLeftShift;
+}
+
+/* Send the key presses and releases the belt needs, then show the result on its keys. */
+- (void)applyModifierLatch
+{
+  if (modifier_latch == nullptr || system == nullptr || window == nullptr) {
+    return;
+  }
+  /* App activation clears GHOST's modifier state without telling the latch. */
+  GHOST_ModifierKeys keys;
+  system->getModifierKeys(keys);
+  for (int i = 0; i < GHOST_IOS_MODIFIER_COUNT; i++) {
+    const GHOST_IOSModifier modifier = GHOST_IOSModifier(i);
+    if (modifier_latch->sent(modifier) && !keys.get(IOS_belt_modifier_key(modifier))) {
+      modifier_latch->forgetSent(modifier);
+    }
+  }
+
+  GHOST_IOSModifierChange changes[GHOST_IOS_MODIFIER_COUNT];
+  const int changes_num = modifier_latch->takeChanges(changes);
+  for (int i = 0; i < changes_num; i++) {
+    const GHOST_TKey key = GHOST_ModifierKeys::getModifierKeyCode(
+        IOS_belt_modifier_key(changes[i].modifier));
+    [self generateKeyEvent:key down:changes[i].down utf8:nullptr];
+  }
+
+  GHOST_IOSModifierMode modes[GHOST_IOS_MODIFIER_COUNT];
+  for (int i = 0; i < GHOST_IOS_MODIFIER_COUNT; i++) {
+    modes[i] = modifier_latch->mode(GHOST_IOSModifier(i));
+  }
+  GHOST_IOSModifierBelt_setModes(modifier_belt, modes);
+}
+
+- (void)modifierBeltKey:(GHOST_IOSModifier)modifier
+                   down:(BOOL)down
+              timestamp:(NSTimeInterval)timestamp
+{
+  if (modifier_latch == nullptr) {
+    return;
+  }
+  if (down) {
+    modifier_latch->keyDown(modifier, timestamp);
+  }
+  else {
+    modifier_latch->keyUp(modifier, timestamp);
+  }
+  [self applyModifierLatch];
+}
+
+- (void)modifierBeltKeyCancelled:(GHOST_IOSModifier)modifier
+{
+  if (modifier_latch == nullptr) {
+    return;
+  }
+  modifier_latch->keyCancelled(modifier);
+  [self applyModifierLatch];
+}
+
+- (void)modifierBeltDidHide
+{
+  if (modifier_latch == nullptr) {
+    return;
+  }
+  modifier_latch->clear();
+  [self applyModifierLatch];
+}
+
+- (void)modifierBeltPointerButton:(bool)pressed
+{
+  if (modifier_latch == nullptr) {
+    return;
+  }
+  if (pressed) {
+    modifier_latch->pointerPressed();
+  }
+  else {
+    modifier_latch->pointerReleased();
+  }
+  [self applyModifierLatch];
+}
+
+- (void)modifierBeltCursorMoved:(CGPoint)point visible:(bool)visible
+{
+  GHOST_IOSModifierBelt_setCursor(modifier_belt, point, visible);
 }
 
 - (void)handleCloseWindow
@@ -884,6 +1010,16 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   };
   for (const ModifierPair &pair : pairs) {
     if ((flags & pair.flag) == 0) {
+      /* The snapshot only covers hardware keys. Keep keys held on the on-screen belt. */
+      bool belt_holds = false;
+      for (int i = 0; i < GHOST_IOS_MODIFIER_COUNT; i++) {
+        const GHOST_IOSModifier modifier = GHOST_IOSModifier(i);
+        belt_holds |= modifier_latch != nullptr && modifier_latch->sent(modifier) &&
+                      IOS_belt_modifier_key(modifier) == pair.left;
+      }
+      if (belt_holds) {
+        continue;
+      }
       for (const GHOST_TModifierKey key : {pair.left, pair.right}) {
         if (keys.get(key)) {
           [self generateKeyEvent:GHOST_ModifierKeys::getModifierKeyCode(key) down:false utf8:nullptr];
@@ -1193,6 +1329,9 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   if (GHOST_IOSFileAccess_containsView(file_access_controls, touch.view)) {
     return NO;
   }
+  if (GHOST_IOSModifierBelt_containsView(modifier_belt, touch.view)) {
+    return NO;
+  }
   return YES;
 }
 
@@ -1235,7 +1374,8 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
           (close_window_button != nil &&
            (touch.view == close_window_button ||
             [touch.view isDescendantOfView:close_window_button])) ||
-          GHOST_IOSFileAccess_containsView(file_access_controls, touch.view))
+          GHOST_IOSFileAccess_containsView(file_access_controls, touch.view) ||
+          GHOST_IOSModifierBelt_containsView(modifier_belt, touch.view))
       {
         continue;
       }
@@ -1302,6 +1442,8 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   for (UITouch *touch in touches) {
     if (touch.type == UITouchTypePencil) {
       [self updateTabletDataFromTouch:touch];
+      const CGPoint point = [self scaledPencilPoint:touch];
+      pencil_contact.touchBegan(point.x, point.y);
       break;
     }
   }
@@ -1316,6 +1458,8 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
     for (UITouch *touch in touches) {
       if (touch == current_pencil_touch) {
         [self updateTabletDataFromTouch:touch];
+        const CGPoint point = [self scaledPencilPoint:touch];
+        pencil_contact.touchMoved(point.x, point.y);
         break;
       }
     }
@@ -1327,6 +1471,8 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
 {
   [super touchesEnded:touches withEvent:event];
   if (current_pencil_touch != nil && [touches containsObject:current_pencil_touch]) {
+    const CGPoint point = [self scaledPencilPoint:current_pencil_touch];
+    pencil_contact.touchEnded(point.x, point.y);
     [self resetTabletData];
   }
 }
@@ -1336,8 +1482,19 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
 {
   [super touchesCancelled:touches withEvent:event];
   if (current_pencil_touch != nil && [touches containsObject:current_pencil_touch]) {
+    const CGPoint point = [self scaledPencilPoint:current_pencil_touch];
+    pencil_contact.touchEnded(point.x, point.y);
     [self resetTabletData];
   }
+}
+
+- (CGPoint)scaledPencilPoint:(UITouch *)touch
+{
+  if (window == nullptr) {
+    return CGPointZero;
+  }
+  CGPoint point = [touch preciseLocationInView:window->getView()];
+  return window->scalePointToWindow(point);
 }
 
 - (CGPoint)getVirtualPointerPoint
@@ -1494,11 +1651,14 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
 {
   const CGPoint point = [sender getScaledTouchPoint:window];
   if (sender.state == UIGestureRecognizerStateBegan) {
+    pencil_contact.strokeBegan();
+    pencil_contact.strokeMoved(point.x, point.y);
     virtual_pointer->moveAbsolute(
         point.x, point.y, GHOST_IOSPointerSource::Pencil, tablet_data);
     virtual_pointer->button(GHOST_kButtonMaskLeft, true, tablet_data);
   }
   else if (sender.state == UIGestureRecognizerStateChanged) {
+    pencil_contact.strokeMoved(point.x, point.y);
     virtual_pointer->moveAbsolute(
         point.x, point.y, GHOST_IOSPointerSource::Pencil, tablet_data);
   }
@@ -1506,9 +1666,13 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
            sender.state == UIGestureRecognizerStateCancelled ||
            sender.state == UIGestureRecognizerStateFailed)
   {
-    virtual_pointer->moveAbsolute(
-        point.x, point.y, GHOST_IOSPointerSource::Pencil, tablet_data);
+    /* End where the tip left the screen. The recognizer has no touches left by now, and hover
+     * stays blocked until the release below has been delivered (#61). */
+    const double end_x = pencil_contact.hasPoint() ? pencil_contact.x() : point.x;
+    const double end_y = pencil_contact.hasPoint() ? pencil_contact.y() : point.y;
+    virtual_pointer->moveAbsolute(end_x, end_y, GHOST_IOSPointerSource::Pencil, tablet_data);
     virtual_pointer->button(GHOST_kButtonMaskLeft, false, tablet_data);
+    pencil_contact.strokeEnded();
   }
 }
 
@@ -1644,6 +1808,11 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
 - (void)handleHover:(GHOSTUIHoverGestureRecognizer *)sender
 {
   if ([sender getTouchType] != UITouchTypePencil && virtual_pointer->usesRelativeMouse()) {
+    return;
+  }
+  /* Hover-capable iPads can report the last hover point, where the stroke started, while the tip
+   * is down or lifting. Moving there before the release drags the stroke back (#61). */
+  if (!pencil_contact.acceptsHover()) {
     return;
   }
 
@@ -2320,6 +2489,7 @@ GHOST_WindowIOS::GHOST_WindowIOS(GHOST_SystemIOS *system_ios,
   /* Gesture recognizers. */
   [ghost_rootWindow registerGestureRecognizers];
   [ghost_rootWindow registerWindowControls];
+  [ghost_rootWindow registerModifierBelt];
 
   /* Deactive the parent (if it exists) and activate this one. */
   if (parent_window_) {
@@ -2470,6 +2640,16 @@ void GHOST_WindowIOS::noteActivity()
   if (metal_view_.preferredFramesPerSecond != active_fps) {
     metal_view_.preferredFramesPerSecond = active_fps;
   }
+}
+
+void GHOST_WindowIOS::modifierBeltPointerButton(const bool pressed)
+{
+  [(GHOSTUIWindow *)rootWindow modifierBeltPointerButton:pressed];
+}
+
+void GHOST_WindowIOS::modifierBeltCursorMoved(const double x, const double y, const bool visible)
+{
+  [(GHOSTUIWindow *)rootWindow modifierBeltCursorMoved:CGPointMake(x, y) visible:visible];
 }
 
 void GHOST_WindowIOS::setTitle(const char *title)

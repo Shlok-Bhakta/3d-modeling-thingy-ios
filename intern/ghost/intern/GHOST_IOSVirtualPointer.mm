@@ -371,12 +371,26 @@ class GHOST_IOSVirtualPointer::Impl {
     if (window_ == nullptr) {
       return;
     }
+    if (down) {
+      /* On-screen modifiers must reach Blender before the press they apply to. */
+      window_->modifierBeltPointerButton(true);
+    }
     system_->pushEvent(std::make_unique<GHOST_EventButton>(system_->getMilliSeconds(),
                                                            down ? GHOST_kEventButtonDown :
                                                                   GHOST_kEventButtonUp,
                                                            window_,
                                                            button,
                                                            tablet));
+    if (!down && !anyButtonDown()) {
+      window_->modifierBeltPointerButton(false);
+    }
+  }
+
+  bool anyButtonDown() const
+  {
+    return state_.buttonDown(GHOST_IOSPointerButton::Left) ||
+           state_.buttonDown(GHOST_IOSPointerButton::Middle) ||
+           state_.buttonDown(GHOST_IOSPointerButton::Right);
   }
 
   void updateCursorLayer()
@@ -400,6 +414,8 @@ class GHOST_IOSVirtualPointer::Impl {
     cursor_layer_.position = CGPointMake(state_.x() / scale, state_.y() / scale);
     cursor_layer_.hidden = system_arrow || !state_.visible() || grab_mode_ == GHOST_kGrabHide;
     [CATransaction commit];
+    window_->modifierBeltCursorMoved(
+        state_.x() / scale, state_.y() / scale, !cursor_layer_.hidden);
   }
 
   static bool stateButton(const GHOST_TButton button, GHOST_IOSPointerButton &state_button)
@@ -533,6 +549,9 @@ void GHOST_IOSVirtualPointer::clearButtons()
     }
   }
   impl_->state_.clearButtons();
+  if (impl_->window_ != nullptr) {
+    impl_->window_->modifierBeltPointerButton(false);
+  }
 }
 
 void GHOST_IOSVirtualPointer::hardwareButtons(const unsigned int mask)

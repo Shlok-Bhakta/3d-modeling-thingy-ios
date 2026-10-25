@@ -46,3 +46,9 @@ Hover moves the cursor on iPads that support it. Pencil double tap sends a
 right click at the current Pencil position.
 
 You can use finger gestures to navigate while working with Pencil.
+
+Hold an on-screen modifier key with a finger while you draw with Pencil. For
+example, hold **Shift** to smooth while sculpting, or **Ctrl** to invert a
+brush. See [Shift, Ctrl, and Alt](/3d-modeling-thingy-ios/controls/touch/#shift-ctrl-and-alt).
+The on-screen keys hide while a hardware keyboard is connected; use its own
+modifier keys instead.

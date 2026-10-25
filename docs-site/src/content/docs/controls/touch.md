@@ -31,6 +31,28 @@ during a long drag or transform without running out of screen.
 Some tools hide the cursor while you're using them. It comes back when
 you finish the operation.
 
+## Shift, Ctrl, and Alt
+
+The keyboard button in a corner of the screen opens Shift, Ctrl, and Alt keys.
+Tap it again to tuck the keys away.
+
+| Key action | What it does |
+| --- | --- |
+| Hold | The key stays down while your finger is on it, like a keyboard key. |
+| Tap | The key applies to your next click, then turns off. |
+| Double tap | The key stays on for every click until you tap it again. A bar under the key shows it's locked. |
+
+To select several objects, faces, or Outliner items, tap **Shift**, then click
+the next item. Double tap **Shift** to keep adding items. In the Outliner,
+**Ctrl** adds items and **Shift** selects a range.
+
+Tapped and locked keys only apply to clicks and drags. Two-finger orbit and
+other navigation gestures keep working normally between clicks.
+
+Drag the keyboard button to move it. It snaps to the nearest corner and stays
+there next time. The keys fade while the cursor is over them, so you can see
+what's underneath. They hide while a hardware keyboard is connected.
+
 ## Moving around an editor
 
 First, move the cursor into the editor you want to use. Gestures go to the
