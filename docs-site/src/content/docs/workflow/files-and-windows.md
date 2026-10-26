@@ -9,6 +9,41 @@ Look under **On My iPhone** or **On My iPad** in Files for the app's
 local documents. Files kept inside the app can be lost when you delete it.
 Keep another copy of important projects before replacing a sideloaded build.
 
+## Settings, add-ons, and extensions
+
+Your preferences live in the **Settings** folder inside the app's folder in
+Files. There's one folder for each Blender version, laid out the same way as
+desktop Blender:
+
+| Folder | Contents |
+| --- | --- |
+| `5.2/config` | Preferences (`userpref.blend`), the startup file, bookmarks, and recent files |
+| `5.2/scripts` | Add-ons, presets, and startup scripts |
+| `5.2/extensions` | Extensions |
+| `5.2/datafiles` | Extra data files, such as fonts |
+
+The preferences file appears after you tap **Continue** in Quick Setup or
+change a preference.
+
+To bring your settings from a computer:
+
+1. Close the app from the app switcher, so it can't save over the files.
+2. Copy the version folder from your computer into **Settings**. On a Mac it's
+   in `~/Library/Application Support/Blender/`. On Windows it's in
+   `%APPDATA%\Blender Foundation\Blender\`, and on Linux in `~/.config/blender/`.
+3. If it's the same version as the app, replace the app's folder. If it's an
+   older version, delete or rename the app's own version folder first. Then
+   open the app and choose **Load 5.1 Settings** on the splash screen, with
+   your folder's version number.
+
+Desktop preferences use desktop interface sizes. If everything looks too small,
+raise **Resolution Scale** in **Edit > Preferences > Interface**.
+
+When the app updates to a newer Blender version, it creates a new version
+folder and offers to load your previous settings. Delete old version folders
+when you no longer need them. See [Add-ons and extensions](/3d-modeling-thingy-ios/limitations/#add-ons-and-extensions)
+for what can run on iPhone and iPad.
+
 ## Open a project
 
 In Files, select a `.blend` file and choose **3D Modeling Thingy** from the share

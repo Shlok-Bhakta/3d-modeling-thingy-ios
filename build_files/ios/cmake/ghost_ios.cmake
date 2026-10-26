@@ -9,6 +9,12 @@ list(APPEND SRC
   intern/GHOST_IOSFileAccess.hh
   intern/GHOST_IOSFileAccess.mm
   intern/GHOST_IOSInputTuning.hh
+  intern/GHOST_IOSModifierBelt.hh
+  intern/GHOST_IOSModifierBelt.mm
+  intern/GHOST_IOSModifierLatch.hh
+  intern/GHOST_IOSPencilContact.hh
+  intern/GHOST_IOSSettingsLocation.hh
+  intern/GHOST_IOSSettingsLocation.mm
   intern/GHOST_IOSVirtualPointer.hh
   intern/GHOST_IOSVirtualPointer.mm
   intern/GHOST_IOSVirtualPointerState.hh
