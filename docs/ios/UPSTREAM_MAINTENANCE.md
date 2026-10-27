@@ -163,6 +163,8 @@ without an iOS branch in the editor or keymap.
 
 ```text
 intern/cycles/blender/addon/properties.py
+scripts/addons_core/bl_pkg/bl_extension_utils.py
+scripts/addons_core/bl_pkg/cli/blender_ext.py
 scripts/addons_core/io_scene_gltf2/io/com/library.py
 scripts/modules/_bpy_internal/http/downloader.py
 ```
@@ -172,7 +174,9 @@ are registered; a later startup script would only update the current scene and
 would regress new scenes. glTF must resolve signed native bridges from the app's
 Frameworks directory. The downloader now contains only a generic import and
 worker invocation; iOS thread selection is isolated in the new
-`worker_context.py` and `thread_context.py` modules.
+`worker_context.py` and `thread_context.py` modules. The Extensions command
+runner hands its arguments to `bl_pkg/bl_extension_thread.py` on iOS, and
+`blender_ext.msglog_from_args` accepts that module's message callback.
 
 ## Intentionally retained risk
 

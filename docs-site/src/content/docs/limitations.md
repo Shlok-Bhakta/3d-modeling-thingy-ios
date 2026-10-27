@@ -58,15 +58,19 @@ formats; changing the filename won't convert one into the other.
 Blender's [add-on installation guide](https://docs.blender.org/manual/en/5.0/editors/preferences/addons.html)
 explains the legacy format.
 
-### The Extensions installer is unsupported
+### Extensions
 
-The current Extensions installer calls a separate Python process for package
-operations. iOS doesn't support that path. This affects packages installed
-through **Get Extensions** and extension-format ZIP files installed from disk.
+**Get Extensions** in Preferences can check extensions.blender.org for updates
+and install, update and remove extensions. You can also install an extension
+ZIP from a file. Turn on **Allow Online Access** first, under
+**System > Network** in Preferences.
 
-Some background download work has been adapted for iOS, but that doesn't fix
-the package installer. Treat extension installation and updates as unsupported
-in this release, even if the package itself contains only Python.
+Desktop Blender runs these steps in a separate Python process. iOS doesn't
+allow that, so the app runs them inside Blender instead.
+
+Extensions built only for Windows, Linux or macOS won't install, because the
+app is an iOS platform. Python-only extensions are the ones to try. They can
+still fail for the reasons in the next section.
 
 ### Add-ons with desktop dependencies
 
@@ -120,5 +124,3 @@ include its name and version too.
 
 The feature list above comes from the release's
 [iOS build settings](https://github.com/Shlok-Bhakta/3d-modeling-thingy-ios/blob/ios-v5.2.1/build_files/cmake/config/blender_ios_features.cmake).
-The extension installer limitation comes from its
-[package command runner](https://github.com/Shlok-Bhakta/3d-modeling-thingy-ios/blob/ios-v5.2.1/scripts/addons_core/bl_pkg/bl_extension_utils.py).

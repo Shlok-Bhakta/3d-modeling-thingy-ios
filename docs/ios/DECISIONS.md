@@ -764,3 +764,38 @@ the drag recognizer. Hover is ignored until both the touch and the stroke have
 ended, and the stroke ends at the tip's last real location. The Simulator can't
 inject Pencil or hover input, so coverage is the pure contact-state tests plus
 source checks; the fix needs confirmation on hover-capable hardware.
+
+## ADR-0037: Run Extensions repository commands on a thread
+
+- Status: accepted
+- Date: 2026-10-26
+
+Issue #64 reports that installing an extension fails with "ios does not support
+processes" and leaves the repository locked, and that Check for Updates never
+refreshes extensions.blender.org. Every repository command (sync, install,
+install from disk, upgrade and uninstall) runs `cli/blender_ext.py` as a child
+Python process and reads null-separated JSON messages from its pipe. ADR-0015
+only moved the background downloader off processes; this command runner still
+called `subprocess.Popen`, which iOS CPython refuses.
+
+On `sys.platform == "ios"`, `command_output_from_json_0` hands the same
+arguments to `bl_extension_thread.py`. It parses them with `blender_ext`'s own
+argument parser and runs the command on a daemon thread. Messages go through a
+queue after a JSON round trip, so callers get the same types a pipe would
+deliver. A cancel request makes the next message report an exit, as SIGINT
+does for the child. An exception becomes a `FATAL_ERROR` message, so the
+operator finishes and releases its repository lock instead of crashing in its
+modal handler. `--force-exit-ok` is dropped because it only covers a closed
+pipe, and in-process it would replace Blender's `sys.unraisablehook`.
+`msglog_from_args` gains a two-line hook for the message callback. Desktop
+platforms keep the child process.
+
+Host tests run real sync, install and uninstall commands against a local
+repository with both transports and compare the messages. They also check
+cancellation, a crashing command, and several commands at once. The simulator
+harness `simulator_extensions.py` refreshes extensions.blender.org, then
+installs and uninstalls the smallest Python-only add-on through the modal
+Preferences operators.
+
+Extensions built only for desktop platforms still can't install, because iOS
+reports its own `ios-arm64` platform.
