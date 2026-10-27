@@ -37,7 +37,7 @@ See [files and windows](/3d-modeling-thingy-ios/workflow/files-and-windows/).
 ## Some desktop workflows won't carry over
 
 3D Modeling Thingy includes Python, but add-ons that need desktop libraries or helper
-programs won't work unchanged. The Extensions installer is unsupported.
+programs won't work unchanged.
 OSL, Hydra rendering, VR, and SpaceMouse support aren't available.
 
 Read [What doesn't work](/3d-modeling-thingy-ios/limitations/) for those limits.

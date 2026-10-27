@@ -5625,6 +5625,10 @@ def msg_print_json_0(ty: str, data: PrimTypeOrSeq) -> bool:
 
 
 def msglog_from_args(args: argparse.Namespace) -> MessageLogger:
+    # Set when Blender runs the command on a thread instead of a child process.
+    if (msg_fn := getattr(args, "msg_fn", None)) is not None:
+        return MessageLogger(msg_fn)
+
     # Will be None when running form Blender.
     output_type = getattr(args, "output_type", 'TEXT')
 

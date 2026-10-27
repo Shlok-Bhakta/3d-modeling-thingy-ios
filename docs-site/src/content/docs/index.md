@@ -31,9 +31,8 @@ It is not affiliated with or endorsed by the Blender Foundation.
 
 Before bringing a project over, check what it needs.
 
-- **Add-on support is limited.** Some Python-only add-ons may work.
+- **Add-on support is limited.** Python-only add-ons and extensions can work.
   Desktop binaries and add-ons that launch other programs won't.
-  The Extensions installer is unsupported on iOS.
 - **No OSL shaders or Hydra rendering.** Projects that depend on them need
   changes before you can use them here.
 - **No VR or SpaceMouse support.**

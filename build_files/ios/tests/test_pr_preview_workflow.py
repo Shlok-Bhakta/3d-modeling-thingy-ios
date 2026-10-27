@@ -190,6 +190,7 @@ class PrPreviewWorkflowTests(unittest.TestCase):
             "test_file_access_runtime.py",
             "test_ghost_hardware_input.py",
             "test_ghost_virtual_pointer.py",
+            "test_extension_commands_without_processes.py",
             "test_pr_preview_workflow.py",
         ):
             self.assertIn(test_file, regression_step)

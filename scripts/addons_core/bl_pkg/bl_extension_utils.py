@@ -239,6 +239,12 @@ def command_output_from_json_0(
         *,
         python_args: Sequence[str],
 ) -> Generator[InfoItemSeq, bool, None]:
+    if sys.platform == "ios":
+        # iOS can't start processes, run the command on a thread instead.
+        from .bl_extension_thread import command_output_from_json_0 as command_output_from_thread
+        yield from command_output_from_thread(args, use_idle)
+        return
+
     cmd = [*blender_ext_cmd(python_args), *args, "--output-type=JSON_0"]
     # Note that the context-manager isn't used to wait until the process is finished as
     # the function only finishes when `poll()` is not none, it's just used to ensure file-handles
