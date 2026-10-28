@@ -390,7 +390,7 @@ typedef struct UserInputEvent {
   UIButton *close_window_button;
   NSObject *file_access_controls;
 
-  /* On-screen Shift, Ctrl and Alt. */
+  /* On-screen Shift, Ctrl, Alt and Cmd. */
   NSObject *modifier_belt;
   GHOST_IOSModifierLatch *modifier_latch;
 }
@@ -815,6 +815,8 @@ static GHOST_TModifierKey IOS_belt_modifier_key(const GHOST_IOSModifier modifier
       return GHOST_kModifierKeyLeftControl;
     case GHOST_IOSModifier::Alt:
       return GHOST_kModifierKeyLeftAlt;
+    case GHOST_IOSModifier::Command:
+      return GHOST_kModifierKeyLeftOS;
   }
   return GHOST_kModifierKeyLeftShift;
 }
