@@ -263,6 +263,8 @@ jobs:
           FMT_INCLUDE_DIR: ${{ env.DEPS_INSTALL }}/fmt/include
         run: |
           python3 -m unittest \
+            build_files/ios/tests/test_command_keymaps.py \
+            build_files/ios/tests/test_ghost_modifier_belt.py \
             build_files/ios/tests/test_ghost_file_access.py \
             build_files/ios/tests/test_simulator_file_access.py \
             build_files/ios/tests/test_file_access_runtime.py \
