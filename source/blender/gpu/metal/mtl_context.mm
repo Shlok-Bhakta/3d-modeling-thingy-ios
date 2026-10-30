@@ -1593,7 +1593,9 @@ void MTLContext::compute_dispatch_indirect(StorageBuf *indirect_buf)
 
   /* Ensure all resources required by upcoming compute submission are correctly bound. */
   const MTLComputePipelineStateInstance *pipe_state_inst = this->ensure_compute_pipeline_state();
-  BLI_assert(pipe_state_inst != nullptr);
+  if (pipe_state_inst == nullptr) {
+    return;
+  }
 
   /* Begin compute encoder. */
   id<MTLComputeCommandEncoder> compute_encoder =
