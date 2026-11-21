@@ -700,6 +700,11 @@ struct GHOST_TEventTrackpadData {
   uint numFingers;
   /** Optional event-local modifier, without changing persistent keyboard state. */
   GHOST_TModifierKey modifierKey;
+  /**
+   * The direction does not depend on a touchpad scroll direction setting, such as a touchscreen
+   * gesture that follows the fingers.
+   */
+  char hasFixedDirection;
 };
 
 enum GHOST_TTouchEventSubTypes {

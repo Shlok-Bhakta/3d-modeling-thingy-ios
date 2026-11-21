@@ -137,6 +137,8 @@ def sample_impl():
             setup(options['setup'])
         if 'orbit_method' in options:
             bpy.context.preferences.inputs.view_rotate_method = options['orbit_method']
+        if 'scroll_direction' in options:
+            bpy.context.preferences.inputs.touchpad_scroll_direction = options['scroll_direction']
         if 'warp' in options:
             window.cursor_warp(*options['warp'])
         if options.get('sidebar'):

@@ -6244,10 +6244,12 @@ void wm_event_add_ghostevent(wmWindowManager *wm,
           break;
       }
 
-#if !defined(WIN32) && !defined(__APPLE__)
+#if !defined(WIN32)
       /* Ensure "auto" is used when supported. */
       char trackpad_scroll_direction = U.trackpad_scroll_direction;
-      if ((WM_capabilities_flag() & WM_CAPABILITY_TRACKPAD_PHYSICAL_DIRECTION) == 0) {
+      if ((WM_capabilities_flag() & WM_CAPABILITY_TRACKPAD_PHYSICAL_DIRECTION) == 0 &&
+          !pd->hasFixedDirection)
+      {
         switch (eUserpref_TrackpadScrollDir(trackpad_scroll_direction)) {
           case USER_TRACKPAD_SCROLL_DIR_TRADITIONAL: {
             event.flag &= ~WM_EVENT_SCROLL_INVERT;

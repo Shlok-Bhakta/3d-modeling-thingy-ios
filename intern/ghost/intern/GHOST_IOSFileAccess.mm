@@ -57,8 +57,12 @@ static os_log_t GHOST_IOS_file_access_log()
   picker_is_presented_ = NO;
   button_ = [[UIButton buttonWithType:UIButtonTypeSystem] retain];
   button_.translatesAutoresizingMaskIntoConstraints = NO;
-  button_.accessibilityLabel = @"Add file location";
-  button_.accessibilityHint = @"Choose a folder that Blender can access";
+  /* The picker only accepts folders, so name the button for what it adds. People who expected to
+   * pick a file to import found everything greyed out. The gesture guide says the same. */
+  button_.accessibilityLabel = @"Add Folder";
+  button_.toolTip = @"Add Folder";
+  button_.accessibilityHint = @"Choose a folder in the Files app so Blender can open and save "
+                              @"files there";
   button_.accessibilityIdentifier = @"blender_file_browser_add_location";
   button_.tintColor = UIColor.whiteColor;
 

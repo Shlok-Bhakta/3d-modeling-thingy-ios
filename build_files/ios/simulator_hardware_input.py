@@ -18,11 +18,12 @@ import time
 HERE = Path(__file__).resolve().parent
 CASES = ('middle', 'gizmos', 'touch', 'keyboard', 'pan', 'zoom', 'wheel', 'wheel-shift',
          'wheel-ctrl', 'wheel-shift-ctrl', 'wheel-alt', 'cursor', 'cursor-load', 'click',
-         'sidebar', 'preferences', 'idle', 'button-chord', 'text-return', 'area-resize')
+         'sidebar', 'preferences', 'idle', 'button-chord', 'text-return', 'area-resize',
+         'touch-orbit-direction')
 # Two-finger gestures currently act on the editor under the virtual cursor by design. This
 # case reproduces the TestFlight report that asks for them to act under the fingers instead.
 OPT_IN_CASES = ('touch-orbit-cursor',)
-TOUCH_CASES = {'touch', 'touch-orbit-cursor'}
+TOUCH_CASES = {'touch', 'touch-orbit-cursor', 'touch-orbit-direction'}
 
 
 def run(*args, **kwargs):
@@ -393,6 +394,25 @@ def exercise(app: Path, device: str, output: Path, case, kind, method, skip_inst
                 assert b['rotation'] != a['rotation'], 'two-finger drag over the viewport did not orbit'
             assert_case('touch-orbit-cursor', before,
                         two_finger_drag(fingers, before['width'], before['height'], -180), orbited)
+
+        elif case == 'touch-orbit-direction':
+            # The touchpad Scroll Direction preference now changes trackpad orbit on iPad.
+            # Touchscreen orbit follows the fingers, so it must not change with it.
+            rx, ry, rw, rh = before['region']
+            fingers = [rx + rw * .5, ry + rh * .5]
+            drag = two_finger_drag(fingers, before['width'], before['height'], -180)
+            rotations = {}
+            for direction in ('TRADITIONAL', 'NATURAL'):
+                before = configure(setup=kind, scroll_direction=direction, warp=center, clear=True)
+                def orbited(b, a, samples, direction=direction):
+                    assert b['rotation'] != a['rotation'], f'two-finger drag did not orbit ({direction})'
+                    rotations[direction] = a['rotation']
+                assert_case(f'touch-orbit-{direction.lower()}', before, drag, orbited)
+            configure(scroll_direction='TRADITIONAL')
+            difference = max(abs(a - b) for a, b in zip(rotations['TRADITIONAL'], rotations['NATURAL']))
+            assert difference < .02, \
+                f'touch orbit changed with the touchpad scroll direction: {rotations}'
+            print('PASS: touch-orbit-direction', flush=True)
 
         elif case == 'area-resize':
             # TestFlight: dragging the edge between the viewport and the Outliner/Properties

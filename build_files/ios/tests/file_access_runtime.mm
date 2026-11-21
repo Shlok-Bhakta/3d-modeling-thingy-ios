@@ -170,6 +170,29 @@ int main(int argc, char **argv)
         NSURL.class, @selector(startAccessingSecurityScopedResource));
     original_start_access = method_setImplementation(start_access_method,
                                                      reinterpret_cast<IMP>(start_access));
+    if (strcmp(argv[1], "file") == 0) {
+      /* TestFlight: a .blend chosen in the folder picker was listed as a folder. */
+      NSURL *file = [url URLByAppendingPathComponent:@"picked.blend" isDirectory:NO];
+      require([[NSData data] writeToURL:file atomically:YES], "fixture file was not written");
+      blender::fsmenu_read_system(blender::ED_fsmenu_get(), true);
+      grant(file);
+      grant(url);
+      spin_until([&] { return menu_paths.count(url.path.UTF8String) == 1; });
+      /* Grants run in order on one queue, so the file's grant has finished as well. */
+      auto persisted = std::make_shared<bool>(false);
+      dispatch_async(g_file_location_queue, ^{
+        dispatch_async(dispatch_get_main_queue(), ^{
+          *persisted = true;
+        });
+      });
+      spin_until([&] { return *persisted; });
+      require(menu_paths.count(file.path.UTF8String) == 0, "a picked file was listed as a folder");
+      require([test_defaults arrayForKey:IOSFileLocationBookmarksKey].count == 1,
+              "a picked file was saved as a folder");
+      [test_defaults removePersistentDomainForName:suite];
+      fprintf(stdout, "PASS: file, only the folder was added\n");
+      return 0;
+    }
     hold_access = !restore;
     hold_resolution = restore;
     blender::fsmenu_read_system(blender::ED_fsmenu_get(), true);

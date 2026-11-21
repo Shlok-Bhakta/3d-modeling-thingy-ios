@@ -5,9 +5,10 @@
 
 Each check drives the path a person uses and records what actually happens:
 
-import-picker:  open the FBX import browser, tap the native add-location button,
-                and require the Files picker to let a person choose the files Blender
-                imports. Choosing a .blend there must not register the file as a folder.
+import-picker:  open the FBX import browser. The native add-location button must be
+                named "Add Folder", because the Files picker it opens only accepts folders
+                and greys out the files Blender imports. Choosing a .blend there must not
+                register the file as a folder.
 blend-compat:   save factory and modified scenes in the app, report each file's header,
                 and load every file with each --host-blender in background mode.
 save:           File > Save on an untitled, modified scene through Blender's file browser
@@ -37,6 +38,7 @@ import time
 
 CHECKS = ("import-picker", "blend-compat", "save", "render", "open-document")
 ADD_LOCATION_BUTTON_ID = "blender_file_browser_add_location"
+ADD_LOCATION_TITLE = "Add Folder"
 CLOSE_BUTTON_ID = "blender_child_window_close"
 PROBE_NAME = "ios_feedback_probe.py"
 EXTERNAL_FOLDER = "BlenderFeedback"
@@ -238,12 +240,28 @@ def picker_flow(item_point: str, screenshot: str) -> str:
 '''
 
 
-def evaluate_picker(after_fbx_tap: list[str], after_blend_tap: list[str],
+def label_flow() -> str:
+    """The add-location button must be named for what it adds."""
+    return f'''- extendedWaitUntil:
+    visible:
+      id: {ADD_LOCATION_BUTTON_ID}
+    timeout: 30000
+- assertVisible:
+    id: {ADD_LOCATION_BUTTON_ID}
+    text: {ADD_LOCATION_TITLE}
+- takeScreenshot: add-folder-button
+'''
+
+
+def evaluate_picker(labeled: bool, after_fbx_tap: list[str], after_blend_tap: list[str],
                     fbx_path: Path, blend_path: Path) -> list[str]:
-    """Judge each picker tap by what reached Blender's System locations."""
+    """Judge the button label and each picker tap by what reached Blender's System locations."""
     problems = []
-    if not any(Path(entry) == fbx_path for entry in after_fbx_tap):
-        problems.append("the Files picker grays out .fbx, so it cannot be chosen for import")
+    if not labeled:
+        problems.append(f"the add-location button is not named {ADD_LOCATION_TITLE!r}, so people "
+                        "expect to pick the file they want to import")
+    if any(Path(entry) == fbx_path for entry in after_fbx_tap):
+        problems.append(f"the folder picker accepted a file and listed it as a folder: {fbx_path}")
     if any(Path(entry) == blend_path for entry in after_blend_tap):
         problems.append(f"the folder picker accepted a .blend and listed it as a folder: {blend_path}")
     return problems
@@ -421,6 +439,7 @@ fixture.blender_test_set_picker_directory({str(session.external).encode()!r})
 '''
     bookmarks_query = FILE_BROWSER_CONTEXT + \
         'result["bookmarks"] = [e.path for e in area.spaces.active.system_bookmarks]\n'
+    labeled = session.maestro("add-folder-label", label_flow())
     session.maestro("picker-fbx", picker_flow(fbx_point, "picker-fbx") + close)
     session.wait_ticks(5)
     after_fbx = session.command(bookmarks_query)["bookmarks"]
@@ -428,7 +447,7 @@ fixture.blender_test_set_picker_directory({str(session.external).encode()!r})
     session.maestro("picker-blend", picker_flow(blend_point, "picker-blend") + close)
     session.wait_ticks(5)
     bookmarks = session.command(bookmarks_query)["bookmarks"]
-    problems = evaluate_picker(after_fbx, bookmarks, session.external / "cube.fbx",
+    problems = evaluate_picker(labeled, after_fbx, bookmarks, session.external / "cube.fbx",
                                session.external / SHARED_DOCUMENT)
     # Blender's own browser is the working route once the folder itself is granted.
     imported = session.command(FILE_BROWSER_CONTEXT + f'''params.directory = {str(session.external).encode() + b"/"!r}
@@ -440,7 +459,7 @@ with bpy.context.temp_override(window=win, area=area, region=region):
     session.wait_ticks(5)
     after = session.command('result["added"] = len(bpy.data.objects) - state["objects_before"]\n')
     session.terminate()
-    return {"listing": names, "after_fbx_tap": after_fbx, "after_blend_tap": bookmarks,
+    return {"listing": names, "labeled": labeled, "after_fbx_tap": after_fbx, "after_blend_tap": bookmarks,
             "browser_import": imported["execute"], "objects_added": after["added"],
             "problems": problems}
 

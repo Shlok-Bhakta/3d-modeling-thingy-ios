@@ -119,17 +119,25 @@ class PickerTests(unittest.TestCase):
     BLEND = Path("/files/BlenderFeedback/shared-from-discord.blend")
     FBX = Path("/files/BlenderFeedback/cube.fbx")
 
-    def test_grayed_import_type_and_file_as_folder_are_reported(self):
-        problems = MODULE.evaluate_picker(["/app/Documents/"],
+    def test_unlabeled_button_and_files_as_folders_are_reported(self):
+        problems = MODULE.evaluate_picker(False, ["/app/Documents/", str(self.FBX)],
                                           ["/app/Documents/", str(self.BLEND) + "/"],
                                           self.FBX, self.BLEND)
-        self.assertEqual(len(problems), 2)
-        self.assertIn(".fbx", problems[0])
-        self.assertIn("listed it as a folder", problems[1])
+        self.assertEqual(len(problems), 3)
+        self.assertIn("Add Folder", problems[0])
+        self.assertIn("cube.fbx", problems[1])
+        self.assertIn("listed it as a folder", problems[2])
 
-    def test_selectable_import_type_and_folder_only_bookmarks_pass(self):
-        self.assertEqual(MODULE.evaluate_picker([str(self.FBX)], ["/files/BlenderFeedback/"],
+    def test_labeled_button_and_folder_only_bookmarks_pass(self):
+        # A folder picker greys out .fbx by design; the label tells people to pick its folder.
+        self.assertEqual(MODULE.evaluate_picker(True, ["/app/Documents/"],
+                                                ["/files/BlenderFeedback/"],
                                                 self.FBX, self.BLEND), [])
+
+    def test_label_flow_checks_the_button_text(self):
+        flow = MODULE.label_flow()
+        self.assertIn(f"id: {MODULE.ADD_LOCATION_BUTTON_ID}", flow)
+        self.assertIn("text: Add Folder", flow)
 
     def test_picker_flow_taps_the_native_button_then_one_item(self):
         flow = MODULE.picker_flow("66%,36%", "picker")

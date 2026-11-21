@@ -1290,7 +1290,9 @@ static GHOST_TModifierKey IOS_belt_modifier_key(const GHOST_IOSModifier modifier
                                                                   event_info.translation.x,
                                                                   event_info.translation.y,
                                                                   true,
-                                                                  2));
+                                                                  2,
+                                                                  GHOST_kModifierKeyNum,
+                                                                  true));
           break;
         case UserInputEvent::EventTypes::PAN_GESTURE_THREE_FINGERS:
           system->pushEvent(std::make_unique<GHOST_EventTrackpad>(system->getMilliSeconds(),
@@ -1302,7 +1304,8 @@ static GHOST_TModifierKey IOS_belt_modifier_key(const GHOST_IOSModifier modifier
                                                                   event_info.translation.y,
                                                                   true,
                                                                   3,
-                                                                  GHOST_kModifierKeyLeftShift));
+                                                                  GHOST_kModifierKeyLeftShift,
+                                                                  true));
           break;
         case UserInputEvent::EventTypes::POINTER_SCROLL:
           system->pushEvent(std::make_unique<GHOST_EventTrackpad>(system->getMilliSeconds(),
@@ -1323,7 +1326,9 @@ static GHOST_TModifierKey IOS_belt_modifier_key(const GHOST_IOSModifier modifier
                                                                   event_info.distance,
                                                                   0,
                                                                   false,
-                                                                  2));
+                                                                  2,
+                                                                  GHOST_kModifierKeyNum,
+                                                                  true));
           break;
         default:
           GHOST_ASSERT(FALSE, "GHOST_SystemIOS::generateUserInputEvents unsupported event type");
@@ -1669,10 +1674,17 @@ static GHOST_TModifierKey IOS_belt_modifier_key(const GHOST_IOSModifier modifier
   const CGPoint point = [sender getScaledTouchPoint:window];
   if (sender.state == UIGestureRecognizerStateBegan) {
     pencil_contact.strokeBegan();
+    /* Press where the tip landed. The recognizer only begins after the tip has moved past the
+     * drag threshold, so pressing at its location would cut off the start of the stroke. */
+    const double start_x = pencil_contact.hasStrokeStart() ? pencil_contact.strokeStartX() :
+                                                             point.x;
+    const double start_y = pencil_contact.hasStrokeStart() ? pencil_contact.strokeStartY() :
+                                                             point.y;
     pencil_contact.strokeMoved(point.x, point.y);
+    virtual_pointer->moveAbsolute(start_x, start_y, GHOST_IOSPointerSource::Pencil, tablet_data);
+    virtual_pointer->button(GHOST_kButtonMaskLeft, true, tablet_data);
     virtual_pointer->moveAbsolute(
         point.x, point.y, GHOST_IOSPointerSource::Pencil, tablet_data);
-    virtual_pointer->button(GHOST_kButtonMaskLeft, true, tablet_data);
   }
   else if (sender.state == UIGestureRecognizerStateChanged) {
     pencil_contact.strokeMoved(point.x, point.y);

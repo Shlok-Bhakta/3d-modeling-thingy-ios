@@ -16,12 +16,18 @@
  * lifts. That location is the last hover point, which is where the stroke started. Hover must not
  * move the cursor until both the touch and the stroke have ended, and the stroke must end at the
  * tip's last real location.
+ *
+ * The drag recognizer only begins once the tip has moved past UIKit's drag threshold, so the
+ * stroke must start at the point where the tip landed rather than where the recognizer began.
  */
 class GHOST_IOSPencilContact {
  public:
   void touchBegan(const double x, const double y)
   {
     touching_ = true;
+    start_x_ = x;
+    start_y_ = y;
+    has_start_ = true;
     setPoint(x, y);
   }
 
@@ -38,6 +44,7 @@ class GHOST_IOSPencilContact {
       setPoint(x, y);
     }
     touching_ = false;
+    has_start_ = false;
   }
 
   void strokeBegan()
@@ -63,11 +70,28 @@ class GHOST_IOSPencilContact {
     touching_ = false;
     stroking_ = false;
     has_point_ = false;
+    has_start_ = false;
   }
 
   bool acceptsHover() const
   {
     return !touching_ && !stroking_;
+  }
+
+  /** Where the tip landed for the current touch, if the window saw it land. */
+  bool hasStrokeStart() const
+  {
+    return has_start_;
+  }
+
+  double strokeStartX() const
+  {
+    return start_x_;
+  }
+
+  double strokeStartY() const
+  {
+    return start_y_;
   }
 
   bool hasPoint() const
@@ -96,6 +120,9 @@ class GHOST_IOSPencilContact {
   double x_ = 0.0;
   double y_ = 0.0;
   bool has_point_ = false;
+  double start_x_ = 0.0;
+  double start_y_ = 0.0;
+  bool has_start_ = false;
   bool touching_ = false;
   bool stroking_ = false;
 };

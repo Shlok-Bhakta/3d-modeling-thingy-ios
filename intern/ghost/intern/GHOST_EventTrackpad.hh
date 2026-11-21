@@ -33,7 +33,8 @@ class GHOST_EventTrackpad : public GHOST_Event {
                       int32_t deltaY,
                       bool isDirectionInverted,
                       uint numFingers = 1,
-                      GHOST_TModifierKey modifierKey = GHOST_kModifierKeyNum)
+                      GHOST_TModifierKey modifierKey = GHOST_kModifierKeyNum,
+                      bool hasFixedDirection = false)
       : GHOST_Event(msec, GHOST_kEventTrackpad, window)
   {
     trackpad_event_data_.subtype = subtype;
@@ -44,6 +45,7 @@ class GHOST_EventTrackpad : public GHOST_Event {
     trackpad_event_data_.isDirectionInverted = isDirectionInverted;
     trackpad_event_data_.numFingers = numFingers;
     trackpad_event_data_.modifierKey = modifierKey;
+    trackpad_event_data_.hasFixedDirection = hasFixedDirection;
     data_ = &trackpad_event_data_;
   }
 
