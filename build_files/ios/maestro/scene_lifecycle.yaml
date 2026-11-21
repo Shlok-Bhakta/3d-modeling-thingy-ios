@@ -5,6 +5,14 @@ name: Blender iPad scene lifecycle
     clearState: true
 - waitForAnimationToEnd:
     timeout: 15000
+# The first-launch gesture guide covers Blender until it is dismissed.
+- runFlow:
+    when:
+      visible:
+        id: blender_onboarding
+    commands:
+      - tapOn:
+          id: blender_onboarding_skip
 - takeScreenshot: blender-scene-connected
 - startRecording: blender-ios-scene-lifecycle
 - tapOn:

@@ -13,6 +13,7 @@
 #include "GHOST_IOSInputTuning.hh"
 #include "GHOST_IOSModifierBelt.hh"
 #include "GHOST_IOSModifierLatch.hh"
+#include "GHOST_IOSOnboarding.hh"
 #include "GHOST_IOSPencilContact.hh"
 #include "GHOST_IOSVirtualPointer.hh"
 #include "GHOST_SystemIOS.hh"
@@ -402,6 +403,7 @@ typedef struct UserInputEvent {
 /* Window controls. */
 - (void)registerWindowControls;
 - (void)registerModifierBelt;
+- (void)registerOnboarding;
 - (void)modifierBeltPointerButton:(bool)pressed;
 - (void)modifierBeltCursorMoved:(CGPoint)point visible:(bool)visible;
 - (void)updateFileAccessControls;
@@ -807,6 +809,13 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
     return;
   }
   modifier_belt = GHOST_IOSModifierBelt_create(window->getView(), self);
+}
+
+- (void)registerOnboarding
+{
+  if (window != nullptr && window->isMainWindow()) {
+    GHOST_IOSOnboarding_presentIfNeeded(self.rootViewController);
+  }
 }
 
 static GHOST_TModifierKey IOS_belt_modifier_key(const GHOST_IOSModifier modifier)
@@ -2503,6 +2512,7 @@ GHOST_WindowIOS::GHOST_WindowIOS(GHOST_SystemIOS *system_ios,
   [ghost_rootWindow registerGestureRecognizers];
   [ghost_rootWindow registerWindowControls];
   [ghost_rootWindow registerModifierBelt];
+  [ghost_rootWindow registerOnboarding];
 
   /* Deactive the parent (if it exists) and activate this one. */
   if (parent_window_) {

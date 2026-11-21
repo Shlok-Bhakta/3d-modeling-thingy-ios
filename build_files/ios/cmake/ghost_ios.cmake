@@ -12,6 +12,9 @@ list(APPEND SRC
   intern/GHOST_IOSModifierBelt.hh
   intern/GHOST_IOSModifierBelt.mm
   intern/GHOST_IOSModifierLatch.hh
+  intern/GHOST_IOSOnboarding.hh
+  intern/GHOST_IOSOnboarding.mm
+  intern/GHOST_IOSOnboardingState.hh
   intern/GHOST_IOSPencilContact.hh
   intern/GHOST_IOSSettingsLocation.hh
   intern/GHOST_IOSSettingsLocation.mm

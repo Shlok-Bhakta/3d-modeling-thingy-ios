@@ -139,6 +139,25 @@ tap emits a balanced right click at the first tap's cached position. The normal
 single tap waits for the double-tap recognizer to fail so both actions cannot
 fire. Every recognizer is detached and released with its GHOST window.
 
+## First-launch gesture guide
+
+`GHOST_IOSOnboarding.mm` presents a four-page guide over the main window the
+first time the app opens from the Home Screen: cursor and clicks, navigation,
+shortcut taps, then the modifier keys, Apple Pencil, hardware input and the
+file-location button. It is a modal sheet on the window's root view controller,
+so touches and pointer input stay with UIKit until it closes, and it becomes
+first responder so hardware keys do not reach Blender. Closing it hands first
+responder back to the window. Skip, Start modeling and Escape store
+`GHOST_IOS_ONBOARDING_VERSION` in user defaults. Raise that version to show new
+content to people who already finished the guide.
+
+Launches with Blender command-line arguments are automated, so they skip the
+guide. `BLENDER_IOS_ONBOARDING=1` forces it for tests. The decision lives in
+`GHOST_IOSOnboardingState.hh` and has unit coverage in
+`build_files/ios/tests/test_ghost_onboarding.py`. Its simulator check is
+`build_files/ios/simulator_onboarding.py`. Blender source files are unchanged;
+`GHOST_WindowIOS.mm` only calls the shim for the main window.
+
 ## Metal ownership and memory soak
 
 The generic Metal backend follows Objective-C's create rule: objects returned

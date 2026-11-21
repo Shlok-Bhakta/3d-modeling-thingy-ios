@@ -5,6 +5,14 @@ name: Blender iOS first interactive viewport
     clearState: false
 - waitForAnimationToEnd:
     timeout: 10000
+# The first-launch gesture guide covers Blender until it is dismissed.
+- runFlow:
+    when:
+      visible:
+        id: blender_onboarding
+    commands:
+      - tapOn:
+          id: blender_onboarding_skip
 - takeScreenshot: blender-splash
 - tapOn:
     point: 10%,50%
