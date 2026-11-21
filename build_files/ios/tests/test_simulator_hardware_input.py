@@ -90,6 +90,30 @@ class WheelAcceptanceTests(unittest.TestCase):
             HARDWARE.assert_wheel_zoom(self.before, self.after, self.samples)
 
 
+class FeedbackFixtureGeometryTests(unittest.TestCase):
+    AREAS = [['VIEW_3D', 0, 300, 1500, 1600], ['OUTLINER', 1502, 1300, 548, 600],
+             ['PROPERTIES', 1502, 300, 548, 998], ['DOPESHEET_EDITOR', 0, 0, 2050, 298]]
+
+    def test_touch_points_flip_blender_window_y(self):
+        self.assertEqual(HARDWARE.window_to_touch((500, 0), 1000, 2000), [.5, 1])
+        self.assertEqual(HARDWARE.window_to_touch((0, 2000), 1000, 2000), [0, 0])
+
+    def test_two_finger_drag_keeps_both_contacts_parallel(self):
+        events = HARDWARE.two_finger_drag((500, 1000), 1000, 2000, -200, steps=4, spread=100)
+        self.assertEqual([e['phase'] for e in events], [1, 6, 6, 6, 6, 2])
+        self.assertEqual(events[0]['points'], [[.45, .5], [.55, .5]])
+        self.assertEqual(events[-1]['points'], [[.45, .6], [.55, .6]])
+        for event in events:
+            self.assertEqual(event['points'][0][1], event['points'][1][1])
+
+    def test_border_is_between_viewport_and_tallest_right_neighbor(self):
+        self.assertEqual(HARDWARE.vertical_border(self.AREAS), [1501, 799])
+
+    def test_border_requires_a_right_neighbor(self):
+        with self.assertRaisesRegex(RuntimeError, 'no area touches'):
+            HARDWARE.vertical_border([['VIEW_3D', 0, 0, 100, 100]])
+
+
 class ModifiedWheelAcceptanceTests(unittest.TestCase):
     def setUp(self):
         self.before = dict(t=0)

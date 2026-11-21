@@ -192,6 +192,7 @@ def sample_impl():
     state['shading_type'] = area.spaces.active.shading.type
     state['frame_current'] = bpy.context.scene.frame_current
     state['frame_end'] = bpy.context.scene.frame_end
+    state['areas'] = [[a.type, a.x, a.y, a.width, a.height] for a in window.screen.areas]
     timeline_area = next((a for a in window.screen.areas
                           if a.type in {'DOPESHEET_EDITOR', 'GRAPH_EDITOR'}), None)
     timeline = next((r for r in timeline_area.regions if r.type == 'WINDOW'), None) if timeline_area else None
