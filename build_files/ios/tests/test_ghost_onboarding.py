@@ -123,8 +123,7 @@ class OnboardingIntegrationTests(unittest.TestCase):
         for suffix in ("", "_skip", "_back", "_next", "_done"):
             self.assertIn(f'@"blender_onboarding{suffix}"', source)
         self.assertIn("GUIDE_ID = 'blender_onboarding'", harness)
-        for title in ("Your finger is the mouse", "Getting around", "Shortcuts",
-                      "A few more things"):
+        for title in ("Cursor", "Navigation", "Shortcuts", "Input & Files"):
             self.assertIn(f'@"{title}"', source)
             self.assertIn(f"'{title}'", harness)
 

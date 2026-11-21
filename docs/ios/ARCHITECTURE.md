@@ -147,7 +147,7 @@ shortcut taps, then the modifier keys, Apple Pencil, hardware input and the
 file-location button. It is a modal sheet on the window's root view controller,
 so touches and pointer input stay with UIKit until it closes, and it becomes
 first responder so hardware keys do not reach Blender. Closing it hands first
-responder back to the window. Skip, Start modeling and Escape store
+responder back to the window. Skip, Done and Escape store
 `GHOST_IOS_ONBOARDING_VERSION` in user defaults. Raise that version to show new
 content to people who already finished the guide.
 

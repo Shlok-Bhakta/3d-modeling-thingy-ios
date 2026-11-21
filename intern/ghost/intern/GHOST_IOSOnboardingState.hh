@@ -30,7 +30,7 @@ inline bool GHOST_IOSOnboarding_shouldPresent(const int completed_version,
   return completed_version < GHOST_IOS_ONBOARDING_VERSION;
 }
 
-/** Welcome, navigation, shortcuts, then keys, Pencil and files. */
+/** Cursor, navigation, shortcuts, then input and files. */
 constexpr int GHOST_IOS_ONBOARDING_PAGE_COUNT = 4;
 
 /** Clamp a page index after a Back or Next step. */

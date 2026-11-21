@@ -22,7 +22,7 @@ import time
 
 HERE = Path(__file__).resolve().parent
 GUIDE_ID = 'blender_onboarding'
-PAGES = ('Your finger is the mouse', 'Getting around', 'Shortcuts', 'A few more things')
+PAGES = ('Cursor', 'Navigation', 'Shortcuts', 'Input & Files')
 
 
 def run(*args, check=True, **kwargs):

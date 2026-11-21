@@ -32,55 +32,51 @@ struct GHOST_IOSOnboardingRow {
 
 struct GHOST_IOSOnboardingPageInfo {
   NSString *title;
+  /** Optional, nil hides it. */
   NSString *subtitle;
-  GHOST_IOSOnboardingRow rows[4];
+  GHOST_IOSOnboardingRow rows[5];
   int row_count;
 };
 
 static const GHOST_IOSOnboardingPageInfo GHOST_IOS_ONBOARDING_PAGES[GHOST_IOS_ONBOARDING_PAGE_COUNT] =
     {
-        {@"Your finger is the mouse",
-         @"There's a cursor on screen. Drag a finger anywhere to move it, then tap to click "
-         @"wherever it is.",
+        {@"Cursor",
+         @"Drag anywhere to move the cursor, tap to click.",
          {
-             {@"hand.point.up.left", @"Drag one finger", @"Moves the cursor"},
-             {@"hand.tap", @"Tap", @"Clicks"},
-             {@"hand.draw", @"Tap, then touch again and drag",
-              @"Clicks and drags. Use it for box select, gizmos and sliders."},
-             {@"hand.tap.fill", @"Triple tap", @"Double-clicks, like when you rename something"},
+             {@"hand.point.up.left", @"One-finger drag", @"Move cursor"},
+             {@"hand.tap", @"Tap", @"Left-click"},
+             {@"hand.draw", @"Double-tap and drag", @"Click and drag (box select, gizmos, sliders)"},
+             {@"hand.tap.fill", @"Triple-tap", @"Double-click"},
+             {@"contextualmenu.and.cursorarrow", @"Two-finger hold", @"Right-click"},
          },
-         4},
-        {@"Getting around",
-         @"These act on whatever editor the cursor is over, so put the cursor there first.",
+         5},
+        {@"Navigation",
+         @"Acts on whichever editor the cursor is over.",
          {
-             {@"rotate.3d", @"Drag two fingers", @"Orbits the view, or scrolls a list"},
-             {@"hand.pinch", @"Pinch", @"Zooms"},
-             {@"arrow.up.and.down.and.arrow.left.and.right", @"Drag three fingers", @"Pans"},
+             {@"rotate.3d", @"Two-finger drag", @"Orbit view / scroll lists"},
+             {@"hand.pinch", @"Pinch", @"Zoom"},
+             {@"arrow.up.and.down.and.arrow.left.and.right", @"Three-finger drag", @"Pan"},
          },
          3},
         {@"Shortcuts",
-         @"A few things you'll do all the time.",
+         nil,
          {
-             {@"arrow.uturn.backward", @"Tap two fingers", @"Undo"},
-             {@"arrow.uturn.forward", @"Tap three fingers", @"Redo"},
-             {@"contextualmenu.and.cursorarrow", @"Hold two fingers still",
-              @"Right-clicks, so you get context menus"},
-             {@"magnifyingglass", @"Tap four fingers",
-              @"Opens search (F3), so you can find any command by name"},
+             {@"arrow.uturn.backward", @"Two-finger tap", @"Undo"},
+             {@"arrow.uturn.forward", @"Three-finger tap", @"Redo"},
+             {@"magnifyingglass", @"Four-finger tap", @"Search (F3)"},
          },
-         4},
-        {@"A few more things",
-         @"If you've used Blender on a computer, the rest should feel familiar.",
+         3},
+        {@"Input & Files",
+         nil,
          {
              {@"keyboard", @"Modifier keys",
-              @"Tap the keyboard button in a corner for Shift, Ctrl, Alt and Cmd. Tap a key once "
-              @"for your next click, or twice to lock it."},
+              @"Tap the keyboard button in the corner for Shift, Ctrl, Alt, and Cmd. Tap once for "
+              @"one click, twice to lock."},
              {@"applepencil", @"Apple Pencil",
-              @"Draws, sculpts and paints right under the tip, with pressure"},
-             {@"computermouse", @"Keyboard, mouse or trackpad",
-              @"Connect one and it works like it does on a computer, shortcuts included"},
-             {@"folder.badge.plus", @"Folder button",
-              @"In a file browser, tap it to add a folder from the Files app"},
+              @"Draws, sculpts, and paints directly under the tip with pressure."},
+             {@"computermouse", @"Keyboard, mouse, trackpad", @"Works the same as desktop Blender."},
+             {@"folder.badge.plus", @"Files",
+              @"Tap the folder button in a file browser to add a folder from the Files app."},
          },
          4},
 };
@@ -152,6 +148,7 @@ static void GHOST_IOSOnboardingSetHidden(UIView *view, const bool hidden)
   NSLayoutConstraint *card_width_;
   UILabel *title_;
   UILabel *subtitle_;
+  UIStackView *content_;
   UIStackView *rows_;
   UIPageControl *dots_;
   UIButton *skip_;
@@ -182,6 +179,7 @@ static void GHOST_IOSOnboardingSetHidden(UIView *view, const bool hidden)
   [card_width_ release];
   [title_ release];
   [subtitle_ release];
+  [content_ release];
   [rows_ release];
   [dots_ release];
   [skip_ release];
@@ -229,7 +227,7 @@ static void GHOST_IOSOnboardingSetHidden(UIView *view, const bool hidden)
   next_ = [GHOST_IOSOnboardingButton(
       @"Next", @"blender_onboarding_next", true, self, @selector(next)) retain];
   done_ = [GHOST_IOSOnboardingButton(
-      @"Start modeling", @"blender_onboarding_done", true, self, @selector(finish)) retain];
+      @"Done", @"blender_onboarding_done", true, self, @selector(finish)) retain];
 
   UIView *spacer = [[[UIView alloc] init] autorelease];
   UIStackView *buttons = [[[UIStackView alloc]
@@ -238,14 +236,14 @@ static void GHOST_IOSOnboardingSetHidden(UIView *view, const bool hidden)
   buttons.alignment = UIStackViewAlignmentCenter;
   buttons.spacing = 8.0f;
 
-  UIStackView *content = [[[UIStackView alloc]
-      initWithArrangedSubviews:@[ title_, subtitle_, rows_, dots_, buttons ]] autorelease];
-  content.translatesAutoresizingMaskIntoConstraints = NO;
-  content.axis = UILayoutConstraintAxisVertical;
-  content.spacing = 12.0f;
-  [content setCustomSpacing:28.0f afterView:subtitle_];
-  [content setCustomSpacing:24.0f afterView:rows_];
-  [card_ addSubview:content];
+  content_ = [[UIStackView alloc]
+      initWithArrangedSubviews:@[ title_, subtitle_, rows_, dots_, buttons ]];
+  content_.translatesAutoresizingMaskIntoConstraints = NO;
+  content_.axis = UILayoutConstraintAxisVertical;
+  content_.spacing = 12.0f;
+  [content_ setCustomSpacing:28.0f afterView:subtitle_];
+  [content_ setCustomSpacing:24.0f afterView:rows_];
+  [card_ addSubview:content_];
 
   UILayoutGuide *safe_area = root.safeAreaLayoutGuide;
   card_width_ = [[card_.widthAnchor constraintEqualToConstant:card_max_width] retain];
@@ -256,11 +254,11 @@ static void GHOST_IOSOnboardingSetHidden(UIView *view, const bool hidden)
     [card_.topAnchor constraintGreaterThanOrEqualToAnchor:safe_area.topAnchor constant:16.0f],
     [card_.bottomAnchor constraintLessThanOrEqualToAnchor:safe_area.bottomAnchor
                                                  constant:-16.0f],
-    [content.topAnchor constraintEqualToAnchor:card_.topAnchor constant:card_padding],
-    [content.bottomAnchor constraintEqualToAnchor:card_.bottomAnchor constant:-card_padding],
-    [content.leadingAnchor constraintEqualToAnchor:card_.leadingAnchor constant:card_padding],
-    [content.trailingAnchor constraintEqualToAnchor:card_.trailingAnchor
-                                           constant:-card_padding],
+    [content_.topAnchor constraintEqualToAnchor:card_.topAnchor constant:card_padding],
+    [content_.bottomAnchor constraintEqualToAnchor:card_.bottomAnchor constant:-card_padding],
+    [content_.leadingAnchor constraintEqualToAnchor:card_.leadingAnchor constant:card_padding],
+    [content_.trailingAnchor constraintEqualToAnchor:card_.trailingAnchor
+                                            constant:-card_padding],
   ]];
 
   [self showPage];
@@ -307,6 +305,9 @@ static void GHOST_IOSOnboardingSetHidden(UIView *view, const bool hidden)
   const GHOST_IOSOnboardingPageInfo &info = GHOST_IOS_ONBOARDING_PAGES[page_];
   title_.text = info.title;
   subtitle_.text = info.subtitle;
+  GHOST_IOSOnboardingSetHidden(subtitle_, info.subtitle == nil);
+  /* Without a subtitle, keep the gap that would have followed it under the title. */
+  [content_ setCustomSpacing:info.subtitle == nil ? 28.0f : 12.0f afterView:title_];
   for (UIView *view in [[rows_.arrangedSubviews copy] autorelease]) {
     [rows_ removeArrangedSubview:view];
     [view removeFromSuperview];
