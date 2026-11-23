@@ -58,3 +58,22 @@ requires the script's fixture and should not be run alone.
 Live iCloud and network-provider access still needs an account configured on a
 real device. The controlled stall covers responsiveness independently of provider
 latency; it does not claim to authenticate or exercise those services.
+
+## Dropping files onto Blender
+
+```sh
+python3 build_files/ios/simulator_file_drop.py \
+  --app /path/to/Blender.app --device <booted-simulator-udid> --output /tmp/file-drop
+```
+
+A test-only dylib adds a small orange view to Blender's window that offers an OBJ
+file through `UIDragInteraction`. HID touches long-press it, carry the drag over
+the 3D viewport and drop it, and a hardware Return confirms Blender's import
+dialog. The run fails when UIKit does not start the drag, when Blender does not
+accept the drop, or when the object is missing afterwards. `in-place` offers a
+file from Documents and requires Blender to read it where it is; `copy` offers
+only a temporary copy and requires exactly one kept copy in
+`Documents/Dropped Files`. Nothing in the production app loads this dylib.
+
+A drag from the Files app or Photos runs in another process, which the simulator
+check does not cover. Check those on a device.

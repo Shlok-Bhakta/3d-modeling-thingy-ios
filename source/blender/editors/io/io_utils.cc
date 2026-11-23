@@ -35,12 +35,14 @@ wmOperatorStatus filesel_drop_import_invoke(bContext *C, wmOperator *op, const w
   if ((filepath_prop && RNA_property_is_set(op->ptr, filepath_prop)) ||
       (directory_prop && RNA_property_is_set(op->ptr, directory_prop)))
   {
+    /* Name a single file without its folder: the dialog widens to fit its title, and a long
+     * path can push the confirm button past the edge of the window. */
     std::string title;
     PropertyRNA *files_prop = RNA_struct_find_property(op->ptr, "files");
     if (directory_prop && files_prop) {
       const auto files = paths_from_operator_properties(op->ptr);
       if (files.size() == 1) {
-        title = files[0];
+        title = BLI_path_basename(files[0].c_str());
       }
       else {
         title = fmt::format(fmt::runtime(TIP_("Import {} files")), files.size());
@@ -49,7 +51,7 @@ wmOperatorStatus filesel_drop_import_invoke(bContext *C, wmOperator *op, const w
     else {
       char filepath[FILE_MAX];
       RNA_string_get(op->ptr, "filepath", filepath);
-      title = filepath;
+      title = BLI_path_basename(filepath);
     }
     return WM_operator_props_dialog_popup(
         C, op, 350, std::move(title), WM_operatortype_name(op->type, op->ptr));

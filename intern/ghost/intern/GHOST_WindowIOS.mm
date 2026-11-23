@@ -10,6 +10,7 @@
 
 #include "GHOST_ContextIOS.hh"
 #include "GHOST_IOSFileAccess.hh"
+#include "GHOST_IOSFileDrop.hh"
 #include "GHOST_IOSInputTuning.hh"
 #include "GHOST_IOSModifierBelt.hh"
 #include "GHOST_IOSModifierLatch.hh"
@@ -392,6 +393,7 @@ typedef struct UserInputEvent {
   /* Native controls for Blender child windows. */
   UIButton *close_window_button;
   NSObject *file_access_controls;
+  NSObject *file_drop;
 
   /* On-screen Shift, Ctrl, Alt and Cmd. */
   NSObject *modifier_belt;
@@ -403,6 +405,7 @@ typedef struct UserInputEvent {
 /* Window controls. */
 - (void)registerWindowControls;
 - (void)registerModifierBelt;
+- (void)registerFileDrop;
 - (void)registerOnboarding;
 - (void)modifierBeltPointerButton:(bool)pressed;
 - (void)modifierBeltCursorMoved:(CGPoint)point visible:(bool)visible;
@@ -630,6 +633,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   toolbar = nil;
   close_window_button = nil;
   file_access_controls = nil;
+  file_drop = nil;
   modifier_belt = nil;
   modifier_latch = new GHOST_IOSModifierLatch();
 }
@@ -652,6 +656,8 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
 
   GHOST_IOSFileAccess_destroyControls(file_access_controls);
   file_access_controls = nil;
+  GHOST_IOSFileDrop_uninstall(file_drop);
+  file_drop = nil;
 
   GHOST_IOSModifierBelt_destroy(modifier_belt);
   modifier_belt = nil;
@@ -809,6 +815,14 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
     return;
   }
   modifier_belt = GHOST_IOSModifierBelt_create(window->getView(), self);
+}
+
+- (void)registerFileDrop
+{
+  if (window == nullptr || file_drop != nil) {
+    return;
+  }
+  file_drop = GHOST_IOSFileDrop_install(window->getView(), system, window);
 }
 
 - (void)registerOnboarding
@@ -2524,6 +2538,7 @@ GHOST_WindowIOS::GHOST_WindowIOS(GHOST_SystemIOS *system_ios,
   [ghost_rootWindow registerGestureRecognizers];
   [ghost_rootWindow registerWindowControls];
   [ghost_rootWindow registerModifierBelt];
+  [ghost_rootWindow registerFileDrop];
   [ghost_rootWindow registerOnboarding];
 
   /* Deactive the parent (if it exists) and activate this one. */
