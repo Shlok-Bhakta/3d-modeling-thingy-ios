@@ -5,6 +5,14 @@ name: Blender iPad touch and keyboard polish
     clearState: true
 - waitForAnimationToEnd:
     timeout: 15000
+# The first-launch gesture guide covers Blender until it is dismissed.
+- runFlow:
+    when:
+      visible:
+        id: blender_onboarding
+    commands:
+      - tapOn:
+          id: blender_onboarding_skip
 - tapOn:
     point: 50%,66%
 - waitForAnimationToEnd:

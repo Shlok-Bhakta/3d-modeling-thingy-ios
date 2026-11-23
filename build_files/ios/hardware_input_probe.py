@@ -137,6 +137,8 @@ def sample_impl():
             setup(options['setup'])
         if 'orbit_method' in options:
             bpy.context.preferences.inputs.view_rotate_method = options['orbit_method']
+        if 'scroll_direction' in options:
+            bpy.context.preferences.inputs.touchpad_scroll_direction = options['scroll_direction']
         if 'warp' in options:
             window.cursor_warp(*options['warp'])
         if options.get('sidebar'):
@@ -192,6 +194,7 @@ def sample_impl():
     state['shading_type'] = area.spaces.active.shading.type
     state['frame_current'] = bpy.context.scene.frame_current
     state['frame_end'] = bpy.context.scene.frame_end
+    state['areas'] = [[a.type, a.x, a.y, a.width, a.height] for a in window.screen.areas]
     timeline_area = next((a for a in window.screen.areas
                           if a.type in {'DOPESHEET_EDITOR', 'GRAPH_EDITOR'}), None)
     timeline = next((r for r in timeline_area.regions if r.type == 'WINDOW'), None) if timeline_area else None

@@ -18,7 +18,12 @@ import time
 HERE = Path(__file__).resolve().parent
 CASES = ('middle', 'gizmos', 'touch', 'keyboard', 'pan', 'zoom', 'wheel', 'wheel-shift',
          'wheel-ctrl', 'wheel-shift-ctrl', 'wheel-alt', 'cursor', 'cursor-load', 'click',
-         'sidebar', 'preferences', 'idle', 'button-chord', 'text-return')
+         'sidebar', 'preferences', 'idle', 'button-chord', 'text-return', 'area-resize',
+         'touch-orbit-direction')
+# Two-finger gestures currently act on the editor under the virtual cursor by design. This
+# case reproduces the TestFlight report that asks for them to act under the fingers instead.
+OPT_IN_CASES = ('touch-orbit-cursor',)
+TOUCH_CASES = {'touch', 'touch-orbit-cursor', 'touch-orbit-direction'}
 
 
 def run(*args, **kwargs):
@@ -44,6 +49,37 @@ def wait_for(predicate, description, timeout=30):
             return value
         time.sleep(.05)
     raise RuntimeError(f'timed out waiting for {description}')
+
+
+def window_to_touch(point, width, height):
+    """Map a Blender window pixel (origin bottom left) to a normalized HID touch point."""
+    return [point[0] / width, 1 - point[1] / height]
+
+
+def two_finger_drag(center, width, height, dy, steps=12, spread=60):
+    """Two parallel fingers around a window pixel, dragged vertically by dy pixels."""
+    def contacts(offset):
+        return [window_to_touch((center[0] + dx, center[1] + offset), width, height)
+                for dx in (-spread / 2, spread / 2)]
+    events = [dict(points=contacts(0), phase=1, wait=.1)]
+    events += [dict(points=contacts(dy * (i + 1) / steps), phase=6, wait=.03) for i in range(steps)]
+    events += [dict(points=contacts(dy), phase=2, wait=.05)]
+    return events
+
+
+def vertical_border(areas, left_type='VIEW_3D'):
+    """Return the window point on the vertical edge between an area and its right neighbor."""
+    left = next(a for a in areas if a[0] == left_type)
+    _, x, y, width, height = left
+    edge = x + width
+    neighbors = [a for a in areas if a is not left and abs(a[1] - edge) <= 20 and
+                 a[2] < y + height and a[2] + a[4] > y]
+    if not neighbors:
+        raise RuntimeError(f'no area touches the right edge of {left_type}: {areas}')
+    right = max(neighbors, key=lambda a: a[4])
+    top = min(y + height, right[2] + right[4])
+    bottom = max(y, right[2])
+    return [int((edge + right[1]) / 2), int((top + bottom) / 2)]
 
 
 def vertical_wheel_reports(before, samples):
@@ -145,7 +181,7 @@ def exercise(app: Path, device: str, output: Path, case, kind, method, skip_inst
 
     before = wait_for(ready, 'Blender and the OS accessory observer', timeout=90)
     hid_environment = dict(os.environ, DEVELOPER_DIR=run('xcode-select', '-p').stdout.strip())
-    if case != 'touch':
+    if case not in TOUCH_CASES:
         # Wait for the OS accessory before replaying button transitions.
         run(helper, device, input=json.dumps([dict(mouse=[0, 0])]), env=hid_environment)
         wait_for(lambda: (s := read_json(platform_file)) and s['mice'], 'the OS mouse connection')
@@ -232,7 +268,7 @@ def exercise(app: Path, device: str, output: Path, case, kind, method, skip_inst
                                            max(-80, min(80, dy / 4))], wait=.1)])
         raise RuntimeError(f'HID mouse did not reach {target}; last position {state["pointer"]}')
 
-    if case != 'touch':
+    if case not in TOUCH_CASES:
         before = point_at(center)
 
     recorder = None
@@ -342,6 +378,59 @@ def exercise(app: Path, device: str, output: Path, case, kind, method, skip_inst
             events += key(0x21) + key(0x1f) + [dict(mouse=[0, 0], wait=.3)] + key(0x28)
             events += [dict(mouse=[0, 0], wait=.5)]
             assert_case('text-return', before, events, committed)
+
+        elif case == 'touch-orbit-cursor':
+            # TestFlight: a two-finger orbit over the viewport scrolled or zoomed the panel
+            # under the last cursor position instead of orbiting the view under the fingers.
+            before = configure(sidebar=True)
+            before = configure(sidebar_category=True, clear=True)
+            x, y, width, height = before['sidebar']
+            before = configure(warp=[int(x + width / 2), int(y + height / 2)], clear=True)
+            rx, ry, rw, rh = before['region']
+            fingers = [rx + rw * .3, ry + rh * .5]
+            def orbited(b, a, samples):
+                assert b['sidebar_view'] == a['sidebar_view'], \
+                    'two-finger drag over the viewport scrolled the sidebar under the cursor'
+                assert b['rotation'] != a['rotation'], 'two-finger drag over the viewport did not orbit'
+            assert_case('touch-orbit-cursor', before,
+                        two_finger_drag(fingers, before['width'], before['height'], -180), orbited)
+
+        elif case == 'touch-orbit-direction':
+            # The touchpad Scroll Direction preference now changes trackpad orbit on iPad.
+            # Touchscreen orbit follows the fingers, so it must not change with it.
+            rx, ry, rw, rh = before['region']
+            fingers = [rx + rw * .5, ry + rh * .5]
+            drag = two_finger_drag(fingers, before['width'], before['height'], -180)
+            rotations = {}
+            for direction in ('TRADITIONAL', 'NATURAL'):
+                before = configure(setup=kind, scroll_direction=direction, warp=center, clear=True)
+                def orbited(b, a, samples, direction=direction):
+                    assert b['rotation'] != a['rotation'], f'two-finger drag did not orbit ({direction})'
+                    rotations[direction] = a['rotation']
+                assert_case(f'touch-orbit-{direction.lower()}', before, drag, orbited)
+            configure(scroll_direction='TRADITIONAL')
+            difference = max(abs(a - b) for a, b in zip(rotations['TRADITIONAL'], rotations['NATURAL']))
+            assert difference < .02, \
+                f'touch orbit changed with the touchpad scroll direction: {rotations}'
+            print('PASS: touch-orbit-direction', flush=True)
+
+        elif case == 'area-resize':
+            # TestFlight: dragging the edge between the viewport and the Outliner/Properties
+            # column crashed immediately, whether expanding or shrinking.
+            before = configure(clear=True)
+            border = vertical_border(before['areas'])
+            for name, step in (('area-resize-expand', -8), ('area-resize-shrink', 8)):
+                before = point_at(border)
+                def resized(b, a, samples):
+                    assert a['pid'] == b['pid'], 'Blender restarted during the resize'
+                    width = lambda s: next(r[3] for r in s['areas'] if r[0] == 'VIEW_3D')
+                    assert (width(a) - width(b)) * step > 20, \
+                        f'dragging the area edge did not resize the viewport ({width(b)} -> {width(a)})'
+                events = [dict(mouse=[0, 0], wait=.8), dict(mouse=[0, 0], buttons=1, wait=.4)]
+                events += [dict(mouse=[step, 0], buttons=1, wait=.04) for _ in range(15)]
+                events += [dict(mouse=[0, 0], wait=.5)]
+                after = assert_case(name, before, events, resized)
+                border = vertical_border(after['areas'])
 
         elif case in {'click', 'sidebar'}:
             before = configure(sidebar=True)
@@ -498,7 +587,7 @@ def main():
     parser.add_argument('--app', required=True, type=Path)
     parser.add_argument('--device', help='Use an existing booted test simulator')
     parser.add_argument('--output', required=True, type=Path)
-    parser.add_argument('--case', action='append', choices=(*CASES, 'wheel-sweep'))
+    parser.add_argument('--case', action='append', choices=(*CASES, *OPT_IN_CASES, 'wheel-sweep'))
     parser.add_argument('--fixture', choices=['cube', 'pose'])
     parser.add_argument('--orbit-method', choices=['TURNTABLE', 'TRACKBALL'])
     parser.add_argument('--wheel-delta', type=float, default=1,

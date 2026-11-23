@@ -834,7 +834,7 @@ const char *GHOST_SystemIOS::getKeyboardInput(GHOST_IWindow *window)
   return windowIOS->getLastKeyboardString();
 }
 
-// Note: called from NSWindow subclass
+/* Called from the file drop shim with client coordinates in window pixels. */
 GHOST_TSuccess GHOST_SystemIOS::handleDraggingEvent(GHOST_TEventType eventType,
                                                     GHOST_TDragnDropTypes draggedObjectType,
                                                     GHOST_WindowIOS *window,
@@ -933,6 +933,7 @@ GHOST_TSuccess GHOST_SystemIOS::handleDraggingEvent(GHOST_TEventType eventType,
           break;
       }
 
+      window->clientToScreenIntern(mouseX, mouseY, mouseX, mouseY);
       pushEvent(std::make_unique<GHOST_EventDragnDrop>(
           getMilliSeconds(), eventType, draggedObjectType, window, mouseX, mouseY, eventData));
 

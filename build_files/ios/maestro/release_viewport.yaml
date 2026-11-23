@@ -5,6 +5,14 @@ name: Blender iPad release viewport
     clearState: true
 - waitForAnimationToEnd:
     timeout: 15000
+# The first-launch gesture guide covers Blender until it is dismissed.
+- runFlow:
+    when:
+      visible:
+        id: blender_onboarding
+    commands:
+      - tapOn:
+          id: blender_onboarding_skip
 - takeScreenshot: blender-release-setup
 - tapOn:
     point: 50%,66%

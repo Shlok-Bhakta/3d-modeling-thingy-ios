@@ -69,6 +69,32 @@ static void IOS_begin_accessing_file_location(NSURL *url)
   }
 }
 
+static void IOS_end_accessing_file_location(NSURL *url)
+{
+  NSString *key = IOS_file_location_key(url);
+  NSURL *scoped_url = key != nil ? g_security_scoped_urls[key] : nil;
+  if (scoped_url != nil) {
+    [scoped_url stopAccessingSecurityScopedResource];
+    [g_security_scoped_urls removeObjectForKey:key];
+  }
+}
+
+/**
+ * The folder picker should only hand back folders, but a TestFlight tester's .blend file was
+ * listed as a folder. Reading the item type is provider I/O, so call this on the file-location
+ * queue after claiming the security scope. An item whose type can't be read stays listed.
+ */
+static bool IOS_file_location_is_file(NSURL *url)
+{
+  NSNumber *is_directory = nil;
+  if (![url getResourceValue:&is_directory forKey:NSURLIsDirectoryKey error:nil] ||
+      is_directory == nil)
+  {
+    return false;
+  }
+  return !is_directory.boolValue;
+}
+
 static void IOS_stop_accessing_file_locations()
 {
   g_file_locations_stopping = true;
@@ -201,6 +227,10 @@ static void IOS_restore_file_locations()
       continue;
     }
     IOS_begin_accessing_file_location(url);
+    if (IOS_file_location_is_file(url)) {
+      IOS_end_accessing_file_location(url);
+      continue;
+    }
     IOS_publish_file_location(url);
     if (is_stale) {
       IOS_persist_file_location(url);
@@ -228,6 +258,11 @@ static void IOS_restore_file_locations()
     @autoreleasepool {
       os_log(IOS_file_access_log(), "Folder grant worker started");
       IOS_begin_accessing_file_location(url);
+      if (IOS_file_location_is_file(url)) {
+        os_log(IOS_file_access_log(), "Folder grant ignored: the picked item is a file");
+        IOS_end_accessing_file_location(url);
+        return;
+      }
       IOS_publish_file_location(url);
       IOS_persist_file_location(url);
       os_log(IOS_file_access_log(), "Folder grant worker completed");

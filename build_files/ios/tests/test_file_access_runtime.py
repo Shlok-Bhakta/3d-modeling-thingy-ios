@@ -49,6 +49,9 @@ class FileAccessRuntimeTests(unittest.TestCase):
     def test_slow_restore_keeps_main_thread_free_and_tolerates_bad_bookmarks(self):
         self.run_case('restore')
 
+    def test_a_picked_file_is_not_added_as_a_folder(self):
+        self.run_case('file')
+
 
 if __name__ == '__main__':
     unittest.main()

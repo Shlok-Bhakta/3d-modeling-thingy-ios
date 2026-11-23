@@ -30,6 +30,13 @@ The default cases cover:
 - The native Preferences close button without a second click reaching Blender, followed by fresh main-loop ticks.
 - The custom app arrow, system tracking, and agreement between native pointer and Blender hit coordinates, both normally and during Cycles viewport startup.
 - Reduced idle display callbacks, live timers, and restoration of the maximum display rate on input.
+- Dragging the edge between the 3D Viewport and the Outliner/Properties column with the mouse, both ways, without restarting Blender.
+- The same two-finger touch orbit with Touchpad Scroll Direction set to Traditional and to Natural. The preference changes hardware trackpad orbit, which the simulator cannot send, so this guards the touchscreen side.
+
+`--case touch-orbit-cursor` is opt-in. It places the virtual cursor over the sidebar and
+drags two fingers over the viewport, asserting that the view orbits. It currently fails:
+two-finger gestures act on the editor under the cursor, which the gesture guide records as
+intended.
 
 Use repeated `--case` options to select cases. `--wheel-delta -1`,
 `--wheel-delta .25`, and `--wheel-delta -12` exercise reverse, fractional, and

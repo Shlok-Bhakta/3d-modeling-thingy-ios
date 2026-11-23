@@ -10,9 +10,11 @@
 
 #include "GHOST_ContextIOS.hh"
 #include "GHOST_IOSFileAccess.hh"
+#include "GHOST_IOSFileDrop.hh"
 #include "GHOST_IOSInputTuning.hh"
 #include "GHOST_IOSModifierBelt.hh"
 #include "GHOST_IOSModifierLatch.hh"
+#include "GHOST_IOSOnboarding.hh"
 #include "GHOST_IOSPencilContact.hh"
 #include "GHOST_IOSVirtualPointer.hh"
 #include "GHOST_SystemIOS.hh"
@@ -391,6 +393,7 @@ typedef struct UserInputEvent {
   /* Native controls for Blender child windows. */
   UIButton *close_window_button;
   NSObject *file_access_controls;
+  NSObject *file_drop;
 
   /* On-screen Shift, Ctrl, Alt and Cmd. */
   NSObject *modifier_belt;
@@ -402,6 +405,8 @@ typedef struct UserInputEvent {
 /* Window controls. */
 - (void)registerWindowControls;
 - (void)registerModifierBelt;
+- (void)registerFileDrop;
+- (void)registerOnboarding;
 - (void)modifierBeltPointerButton:(bool)pressed;
 - (void)modifierBeltCursorMoved:(CGPoint)point visible:(bool)visible;
 - (void)updateFileAccessControls;
@@ -628,6 +633,7 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
   toolbar = nil;
   close_window_button = nil;
   file_access_controls = nil;
+  file_drop = nil;
   modifier_belt = nil;
   modifier_latch = new GHOST_IOSModifierLatch();
 }
@@ -650,6 +656,8 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
 
   GHOST_IOSFileAccess_destroyControls(file_access_controls);
   file_access_controls = nil;
+  GHOST_IOSFileDrop_uninstall(file_drop);
+  file_drop = nil;
 
   GHOST_IOSModifierBelt_destroy(modifier_belt);
   modifier_belt = nil;
@@ -807,6 +815,21 @@ static bool modifierForKey(const GHOST_TKey key, GHOST_TModifierKey &modifier)
     return;
   }
   modifier_belt = GHOST_IOSModifierBelt_create(window->getView(), self);
+}
+
+- (void)registerFileDrop
+{
+  if (window == nullptr || file_drop != nil) {
+    return;
+  }
+  file_drop = GHOST_IOSFileDrop_install(window->getView(), system, window);
+}
+
+- (void)registerOnboarding
+{
+  if (window != nullptr && window->isMainWindow()) {
+    GHOST_IOSOnboarding_presentIfNeeded(self.rootViewController);
+  }
 }
 
 static GHOST_TModifierKey IOS_belt_modifier_key(const GHOST_IOSModifier modifier)
@@ -1281,7 +1304,9 @@ static GHOST_TModifierKey IOS_belt_modifier_key(const GHOST_IOSModifier modifier
                                                                   event_info.translation.x,
                                                                   event_info.translation.y,
                                                                   true,
-                                                                  2));
+                                                                  2,
+                                                                  GHOST_kModifierKeyNum,
+                                                                  true));
           break;
         case UserInputEvent::EventTypes::PAN_GESTURE_THREE_FINGERS:
           system->pushEvent(std::make_unique<GHOST_EventTrackpad>(system->getMilliSeconds(),
@@ -1293,7 +1318,8 @@ static GHOST_TModifierKey IOS_belt_modifier_key(const GHOST_IOSModifier modifier
                                                                   event_info.translation.y,
                                                                   true,
                                                                   3,
-                                                                  GHOST_kModifierKeyLeftShift));
+                                                                  GHOST_kModifierKeyLeftShift,
+                                                                  true));
           break;
         case UserInputEvent::EventTypes::POINTER_SCROLL:
           system->pushEvent(std::make_unique<GHOST_EventTrackpad>(system->getMilliSeconds(),
@@ -1314,7 +1340,9 @@ static GHOST_TModifierKey IOS_belt_modifier_key(const GHOST_IOSModifier modifier
                                                                   event_info.distance,
                                                                   0,
                                                                   false,
-                                                                  2));
+                                                                  2,
+                                                                  GHOST_kModifierKeyNum,
+                                                                  true));
           break;
         default:
           GHOST_ASSERT(FALSE, "GHOST_SystemIOS::generateUserInputEvents unsupported event type");
@@ -1660,10 +1688,17 @@ static GHOST_TModifierKey IOS_belt_modifier_key(const GHOST_IOSModifier modifier
   const CGPoint point = [sender getScaledTouchPoint:window];
   if (sender.state == UIGestureRecognizerStateBegan) {
     pencil_contact.strokeBegan();
+    /* Press where the tip landed. The recognizer only begins after the tip has moved past the
+     * drag threshold, so pressing at its location would cut off the start of the stroke. */
+    const double start_x = pencil_contact.hasStrokeStart() ? pencil_contact.strokeStartX() :
+                                                             point.x;
+    const double start_y = pencil_contact.hasStrokeStart() ? pencil_contact.strokeStartY() :
+                                                             point.y;
     pencil_contact.strokeMoved(point.x, point.y);
+    virtual_pointer->moveAbsolute(start_x, start_y, GHOST_IOSPointerSource::Pencil, tablet_data);
+    virtual_pointer->button(GHOST_kButtonMaskLeft, true, tablet_data);
     virtual_pointer->moveAbsolute(
         point.x, point.y, GHOST_IOSPointerSource::Pencil, tablet_data);
-    virtual_pointer->button(GHOST_kButtonMaskLeft, true, tablet_data);
   }
   else if (sender.state == UIGestureRecognizerStateChanged) {
     pencil_contact.strokeMoved(point.x, point.y);
@@ -2503,6 +2538,8 @@ GHOST_WindowIOS::GHOST_WindowIOS(GHOST_SystemIOS *system_ios,
   [ghost_rootWindow registerGestureRecognizers];
   [ghost_rootWindow registerWindowControls];
   [ghost_rootWindow registerModifierBelt];
+  [ghost_rootWindow registerFileDrop];
+  [ghost_rootWindow registerOnboarding];
 
   /* Deactive the parent (if it exists) and activate this one. */
   if (parent_window_) {

@@ -54,6 +54,9 @@ class GhostFileAccessTests(unittest.TestCase):
 
         self.assertIn("glassButtonConfiguration", access_source)
         self.assertIn("constraintEqualToConstant:44.0f", access_source)
+        # A wider, titled button covers the file browser's search and display controls.
+        self.assertNotIn("configuration.title", access_source)
+        self.assertIn('accessibilityLabel = @"Add Folder"', access_source)
         self.assertIn("constraintEqualToAnchor:close_button.leadingAnchor", access_source)
         self.assertIn("constraintEqualToAnchor:close_button.centerYAnchor", access_source)
 

@@ -8,10 +8,16 @@ list(APPEND SRC
   intern/GHOST_EventTouch.hh
   intern/GHOST_IOSFileAccess.hh
   intern/GHOST_IOSFileAccess.mm
+  intern/GHOST_IOSFileDrop.hh
+  intern/GHOST_IOSFileDrop.mm
+  intern/GHOST_IOSFileDropLoad.mm
   intern/GHOST_IOSInputTuning.hh
   intern/GHOST_IOSModifierBelt.hh
   intern/GHOST_IOSModifierBelt.mm
   intern/GHOST_IOSModifierLatch.hh
+  intern/GHOST_IOSOnboarding.hh
+  intern/GHOST_IOSOnboarding.mm
+  intern/GHOST_IOSOnboardingState.hh
   intern/GHOST_IOSPencilContact.hh
   intern/GHOST_IOSSettingsLocation.hh
   intern/GHOST_IOSSettingsLocation.mm

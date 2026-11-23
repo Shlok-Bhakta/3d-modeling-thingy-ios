@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 
-"""Apple Pencil stroke ends must stay where the tip left the screen (issue #61).
+"""Apple Pencil strokes must start where the tip landed and end where it left the screen.
+
+A TestFlight tester reported that strokes start a little after the tip touches the screen. The
+drag recognizer only begins once the tip has moved past UIKit's drag threshold, so pressing at
+its location loses the first part of every stroke. The window records the touch-down point and
+presses there instead.
+
+Stroke ends are issue #61.
 
 On iPads with Pencil hover, UIKit can report a hover location while the tip is
 down or as it lifts. That location is the last hover point, which is where the
@@ -123,6 +130,44 @@ class GhostPencilContactTests(unittest.TestCase):
             """,
         )
 
+    def test_stroke_starts_where_the_tip_landed(self) -> None:
+        run_contact_harness(
+            self,
+            """
+            GHOST_IOSPencilContact contact;
+            CHECK(!contact.hasStrokeStart());
+
+            /* The tip lands, then moves past the drag threshold before the recognizer begins. */
+            contact.touchBegan(100.0, 200.0);
+            contact.touchMoved(104.0, 203.0);
+            contact.touchMoved(112.0, 208.0);
+            contact.strokeBegan();
+            CHECK(contact.hasStrokeStart());
+            CHECK(contact.strokeStartX() == 100.0 && contact.strokeStartY() == 200.0);
+            contact.strokeMoved(112.0, 208.0);
+            CHECK(contact.x() == 112.0 && contact.y() == 208.0);
+            CHECK(contact.strokeStartX() == 100.0 && contact.strokeStartY() == 200.0);
+            """,
+        )
+
+    def test_a_stroke_without_a_new_touch_has_no_stale_start(self) -> None:
+        run_contact_harness(
+            self,
+            """
+            GHOST_IOSPencilContact contact;
+            contact.touchBegan(10.0, 20.0);
+            contact.touchEnded(10.0, 20.0);
+            contact.strokeBegan();
+            CHECK(!contact.hasStrokeStart());
+            contact.strokeEnded();
+
+            contact.touchBegan(30.0, 40.0);
+            contact.reset();
+            contact.strokeBegan();
+            CHECK(!contact.hasStrokeStart());
+            """,
+        )
+
     def test_taps_and_cancelled_touches_restore_hover(self) -> None:
         run_contact_harness(
             self,
@@ -166,6 +211,9 @@ class GhostPencilContactWiringTests(unittest.TestCase):
         self.assertIn("pencil_contact.strokeEnded()", drag)
         self.assertIn("pencil_contact.strokeMoved(", drag)
         self.assertIn("pencil_contact.x()", drag)
+        press = drag.index("button(GHOST_kButtonMaskLeft, true")
+        start = drag.index("pencil_contact.strokeStartX()")
+        self.assertLess(start, press)
         release = drag.index("button(GHOST_kButtonMaskLeft, false")
         self.assertLess(release, drag.index("pencil_contact.strokeEnded()"))
 

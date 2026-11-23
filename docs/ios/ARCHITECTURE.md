@@ -139,6 +139,45 @@ tap emits a balanced right click at the first tap's cached position. The normal
 single tap waits for the double-tap recognizer to fail so both actions cannot
 fire. Every recognizer is detached and released with its GHOST window.
 
+## First-launch gesture guide
+
+`GHOST_IOSOnboarding.mm` presents a four-page guide over the main window the
+first time the app opens from the Home Screen: cursor and clicks, navigation,
+shortcut taps, then the modifier keys, Apple Pencil, hardware input and the
+file-location button. It is a modal sheet on the window's root view controller,
+so touches and pointer input stay with UIKit until it closes, and it becomes
+first responder so hardware keys do not reach Blender. Closing it hands first
+responder back to the window. Skip, Done and Escape store
+`GHOST_IOS_ONBOARDING_VERSION` in user defaults. Raise that version to show new
+content to people who already finished the guide.
+
+Launches with Blender command-line arguments are automated, so they skip the
+guide. `BLENDER_IOS_ONBOARDING=1` forces it for tests. The decision lives in
+`GHOST_IOSOnboardingState.hh` and has unit coverage in
+`build_files/ios/tests/test_ghost_onboarding.py`. Its simulator check is
+`build_files/ios/simulator_onboarding.py`. Blender source files are unchanged;
+`GHOST_WindowIOS.mm` only calls the shim for the main window.
+
+## Dropping files from other apps
+
+`GHOST_IOSFileDrop.mm` adds a `UIDropInteraction` to every Blender window and
+accepts any file. While a drag is over the window, Blender's cursor follows it,
+so the editor under the cursor highlights and receives the drop the same way it
+does on the desktop. The dropped paths go through GHOST's existing
+`GHOST_kEventDraggingDropDone` event, so Blender's own drop handlers decide what
+happens: open or append a .blend, import a model, load an image.
+
+`GHOST_IOSFileDropLoad.mm` turns the dropped items into paths off the main
+thread. A file offered in place, such as one dragged from the Files app, keeps
+its location, so textures next to a .blend still resolve; its security scope
+stays open for the session. Anything else, such as a photo, is copied into
+`Documents/Dropped Files` first, because UIKit deletes its temporary copy as
+soon as the load returns. That folder shows up in the Files app.
+
+`build_files/ios/tests/test_file_drop_runtime.py` runs the loader on macOS with
+real item providers. `build_files/ios/simulator_file_drop.py` drags an OBJ onto
+the 3D viewport through UIKit in the simulator and confirms Blender imports it.
+
 ## Metal ownership and memory soak
 
 The generic Metal backend follows Objective-C's create rule: objects returned
